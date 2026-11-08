@@ -1,0 +1,35 @@
+name: tori_mfi_bank
+description: TORI MFI banking application, migrated from the supplied Android source.
+publish_to: none
+version: 1.0.0+1
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  intl: 0.19.0
+  shared_preferences: 2.3.2
+  connectivity_plus: 6.0.5
+  image_picker: 1.1.2
+  app_settings: 5.1.1
+  http: ^1.2.2
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+  fonts:
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/fonts/plus_jakarta_sans.ttf
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/inter.ttf
+    - family: HindSiliguri
+      fonts:
+        - asset: assets/fonts/hind_siliguri.ttf
+    - family: NotoSansBengali
+      fonts:
+        - asset: assets/fonts/noto_sans_bengali.ttf
