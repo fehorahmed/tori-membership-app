@@ -1,3 +1,7 @@
 analyzer:
   errors:
     unused_import: warning
+  exclude:
+    - build/**
+    - android/**
+    - web/**

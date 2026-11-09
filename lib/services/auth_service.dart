@@ -1,28 +1,20 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiConfig {
-  // 1. Environment variable injection for production:
-  //    Command: flutter run --dart-define=BASE_URL=https://api.yourdomain.com/api
+  // Load from .env with: flutter run --dart-define-from-file=.env
+  // An explicit --dart-define=BASE_URL=... takes precedence over the file.
   static const String _envBaseUrl = String.fromEnvironment('BASE_URL');
 
-  // 2. Smart auto-detection for development environments
   static String get baseUrl {
-    if (_envBaseUrl.isNotEmpty) return _envBaseUrl;
-
-    if (kIsWeb) {
-      return 'http://127.0.0.1:8000/api';
+    final value = _envBaseUrl.trim().replaceFirst(RegExp(r'/+$'), '');
+    if (value.isEmpty) {
+      throw StateError(
+        'BASE_URL is missing. Run Flutter with --dart-define-from-file=.env',
+      );
     }
-
-    // For Android: 
-    // In emulator, use 10.0.2.2. On physical device connected to same Wi-Fi, use your PC's IP:
-    // Change this if testing on a real phone via Wi-Fi:
-    const bool isPhysicalPhone = false; 
-    const String pcWifiIp = '192.168.0.101'; 
-
-    return isPhysicalPhone ? 'http://$pcWifiIp:8000/api' : 'http://10.0.2.2:8000/api';
+    return value;
   }
 
   static String get membershipAuthUrl => '$baseUrl/membership/v1/auth';

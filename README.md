@@ -8,15 +8,18 @@ Validated with Flutter 3.24.5 / Dart 3.5.4:
 
 ```sh
 flutter pub get
-flutter run
+cp .env.example .env
+flutter run --dart-define-from-file=.env
 ```
 
-For Android, install Android SDK 34 and Java 17, then run `flutter build apk`. The project uses Android Gradle Plugin 8.3.2 / Gradle 8.4 to satisfy the connectivity plugin requirements. Release signing is still the generated debug configuration; supply your existing signing configuration before publishing.
+Set `BASE_URL` in `.env` to your backend base URL, including `/api`. The file is ignored by Git; `.env.example` is the shared template. For the Android emulator, use `http://10.0.2.2:8000/api`; for a physical phone, use the backend computer's LAN IP. Restart the Flutter run command after changing `.env`. An explicit `--dart-define=BASE_URL=...` overrides the file. Client configuration is included in the compiled app, so do not put server secrets in this file.
+
+For Android, install Android SDK 34 and Java 17, then run `flutter build apk --dart-define-from-file=.env`. The project uses Android Gradle Plugin 8.3.2 / Gradle 8.4 to satisfy the connectivity plugin requirements. Release signing is still the generated debug configuration; supply your existing signing configuration before publishing.
 
 For a browser preview:
 
 ```sh
-flutter run -d chrome --web-renderer html
+flutter run -d chrome --dart-define-from-file=.env
 ```
 
 ## Source layout
