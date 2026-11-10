@@ -45,7 +45,7 @@ class ProfileScreen extends StatelessWidget {
                           s.tr('Nominee Information', 'নমিনী তথ্য'),
                           Icons.groups_outlined,
                           p,
-                          () => showNominee(context, s))
+                          null)
                     ]),
                     group(s.tr('MY CARD', 'ডিজিটাল কার্ড'), p, [
                       profileRow(s.tr('My Card', 'আমার ডিজিটাল কার্ড'),
@@ -59,7 +59,7 @@ class ProfileScreen extends StatelessWidget {
                           s.tr('Security & Access', 'সিকিউরিটি ও এক্সেস'),
                           Icons.admin_panel_settings_outlined,
                           p,
-                          () => showSecurity(context, s),
+                          null,
                           badge: 'SECURE HUB'),
                       SwitchListTile(
                           value: s.dark,
@@ -87,7 +87,7 @@ class ProfileScreen extends StatelessWidget {
                           s.tr('Help & Support', 'সহযোগিতা'),
                           Icons.phone_outlined,
                           p,
-                          () => showSupport(context, s),
+                          null,
                           badge: 'Priority Support'),
                       profileRow(s.tr('Privacy Policy', 'প্রাইভেসি পলিসি'),
                           Icons.gavel, p, () => showLegal(context, s, false)),
@@ -141,9 +141,9 @@ Widget group(String title, Palette p, List<Widget> children) => stack([
           padding: 0,
           radius: 18)
     ], spacing: 8);
-Widget profileRow(String title, IconData icon, Palette p, VoidCallback tap,
+Widget profileRow(String title, IconData icon, Palette p, VoidCallback? tap,
         {String? subtitle, String? badge, Color? tint}) =>
-    InkWell(
+    Opacity(opacity: tap == null ? .4 : 1, child: InkWell(
         onTap: tap,
         child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -167,7 +167,7 @@ Widget profileRow(String title, IconData icon, Palette p, VoidCallback tap,
                       child: pill(badge, p.primary, size: 9))
               ], spacing: 4)),
               Icon(Icons.chevron_right, size: 18, color: p.muted)
-            ])));
+            ]))));
 
 Future<bool> verifyUpdate(
     BuildContext context, ToriState s, String title) async {

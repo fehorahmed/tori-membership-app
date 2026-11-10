@@ -102,7 +102,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                       onTap: () => showStatement(context, s)),
                   hgap(8),
                   roundIcon(Icons.qr_code_scanner, p,
-                      onTap: () => showQrScanner(context, s))
+                      onTap: () => showCashout(context, s))
                 ])),
             if (step > 0 && step < 5)
               Padding(
@@ -156,12 +156,9 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
         hgap(12),
         Expanded(
             child: stack([
-          text(
-              s.tr('Source: TORI Premium Savings',
-                  'উৎস হিসাব (TORI প্রিমিয়াম সঞ্চয়)'),
-              size: 11,
-              color: p.muted),
-          text('A/C •••• 4589', size: 13, color: p.ink)
+          text(s.tr('Source: Shomriddhi Savings', 'উৎস: সমৃদ্ধি সঞ্চয়'),
+              size: 11, color: p.muted),
+          text(s.profile.mfiId, size: 13, color: p.ink)
         ], spacing: 4)),
         Flexible(
             child: stack([
@@ -180,11 +177,16 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
             Icons.payments,
             p.primary,
             () => showCashout(context, s)),
-        tabs([
-          s.tr('Transfer', 'ট্রান্সফার'),
-          s.tr('Pay Bills', 'বিল পে'),
-          s.tr('MFS / Cashout', 'এমএফএস')
-        ], category, (v) => setState(() => category = v), p),
+        tabs(
+            [
+              s.tr('Transfer', 'ট্রান্সফার'),
+              s.tr('Pay Bills', 'বিল পে'),
+              s.tr('MFS / Cashout', 'এমএফএস')
+            ],
+            category,
+            (v) => setState(() => category = v),
+            p,
+            enabledIndices: const {0, 2}),
         if (category == 0) ...[
           tabs([
             'TORI Pay',
@@ -193,7 +195,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
           ], s.channel.index, (i) {
             s.channel = TransferChannel.values[i];
             s.changed();
-          }, p),
+          }, p, enabledIndices: const {0}),
           Row(children: [
             Expanded(
                 child: hubAction(
@@ -229,8 +231,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                     () => showStatement(context, s)))
           ]),
           sectionTitle(s.tr('Saved Beneficiaries', 'প্রিয় প্রাপক ও সদস্য'), p,
-              action: s.tr('See All', 'সব দেখুন'), onAction: () => next(1)),
-          beneficiaries(),
+              action: s.tr('See All', 'সব দেখুন'), onAction: null),
+          disabledFeature(beneficiaries()),
         ],
         if (category == 1) ...[
           sectionTitle(
@@ -324,22 +326,31 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
       ], spacing: 16);
   Widget hubAction(String title, String caption, IconData icon, Color color,
           VoidCallback onTap) =>
-      InkWell(
-          onTap: onTap,
-          child: panel(
-              p,
-              stack([
-                Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                        color: color.withValues(alpha: .12),
-                        borderRadius: BorderRadius.circular(12)),
-                    child: Icon(icon, color: color, size: 22)),
-                text(title, size: 14, color: p.ink),
-                text(caption, size: 10, color: p.muted)
-              ], spacing: 8),
-              radius: 16));
+      _availableAction(
+          title,
+          InkWell(
+              onTap: onTap,
+              child: panel(
+                  p,
+                  stack([
+                    Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                            color: color.withValues(alpha: .12),
+                            borderRadius: BorderRadius.circular(12)),
+                        child: Icon(icon, color: color, size: 22)),
+                    text(title, size: 14, color: p.ink),
+                    text(caption, size: 10, color: p.muted)
+                  ], spacing: 8),
+                  radius: 16)));
+  Widget _availableAction(String title, Widget child) {
+    final enabled = title == s.tr('Branch Cash Out', 'শাখা থেকে ক্যাশ আউট') ||
+        title == s.tr('Send Money', 'টাকা পাঠান') ||
+        title == s.tr('Statement', 'লেনদেন বিবরণ');
+    return enabled ? child : disabledFeature(child);
+  }
+
   Widget beneficiaries() => SizedBox(
       height: 82,
       child: ListView(scrollDirection: Axis.horizontal, children: [

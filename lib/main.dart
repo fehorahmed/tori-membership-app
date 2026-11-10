@@ -1,3 +1,4 @@
+import 'cashout.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,7 +12,6 @@ import 'dashboard.dart';
 import 'accounts.dart';
 import 'payments.dart';
 import 'profile.dart';
-import 'dialogs.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -202,7 +202,7 @@ class _BankRootState extends State<BankRoot> {
                                                         child: IconButton(
                                                             tooltip:
                                                                 'Scan QR Code',
-                                                            onPressed: () => showQrScanner(
+                                                            onPressed: () => showCashout(
                                                                 context, s),
                                                             icon: Icon(Icons.qr_code_scanner,
                                                                 size: 28,
@@ -222,24 +222,29 @@ class _BankRootState extends State<BankRoot> {
       s.tr('Profile', 'প্রোফাইল')
     ][i];
     return Expanded(
-        child: InkWell(
-            onTap: () => s.navigate(AppNavTab.values[i]),
-            borderRadius: BorderRadius.circular(40),
-            child:
-                Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(
-                  const [
-                    Icons.home,
-                    Icons.account_balance_wallet,
-                    Icons.swap_horiz,
-                    Icons.person
-                  ][i],
-                  size: 20,
-                  color: selected ? p.primary : p.muted),
-              gap(2),
-              text(label,
-                  size: 10, color: selected ? p.primary : p.muted, lines: 1)
-            ])));
+        child: Opacity(
+            opacity: i == 1 ? .4 : 1,
+            child: InkWell(
+                onTap: i == 1 ? null : () => s.navigate(AppNavTab.values[i]),
+                borderRadius: BorderRadius.circular(40),
+                child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                          const [
+                            Icons.home,
+                            Icons.account_balance_wallet,
+                            Icons.swap_horiz,
+                            Icons.person
+                          ][i],
+                          size: 20,
+                          color: selected ? p.primary : p.muted),
+                      gap(2),
+                      text(label,
+                          size: 10,
+                          color: selected ? p.primary : p.muted,
+                          lines: 1)
+                    ]))));
   }
 }
 

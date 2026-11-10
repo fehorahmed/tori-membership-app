@@ -174,7 +174,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                           color: p.ink)
                                     ])),
                                 hgap(),
-                                roundIcon(Icons.search, p, onTap: () {}),
+                                disabledFeature(roundIcon(Icons.search, p)),
                                 hgap(),
                                 roundIcon(
                                     s.dark ? Icons.light_mode : Icons.dark_mode,
@@ -193,6 +193,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 for (int i = row * 4; i < row * 4 + 4; i++)
                                   Expanded(
                                       child: ServiceTile(
+                                          enabled: i == 0 || i == 1 || i == 7,
                                           label: [
                                             s.tr('Send Money', 'সেন্ড মানি'),
                                             s.tr('Passbook', 'পাসবুক'),
@@ -258,7 +259,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       gap(20),
                       sectionTitle(s.tr('Quick Send', 'দ্রুত পাঠান'), p),
                       gap(12),
-                      SizedBox(
+                      disabledFeature(SizedBox(
                           height: 90,
                           child: ListView(
                               scrollDirection: Axis.horizontal,
@@ -299,11 +300,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 color: p.ink,
                                                 lines: 1)
                                           ])))
-                              ])),
+                              ]))),
                       for (final a in s.accounts
                           .where((a) => a.type == AccountType.MFI_LOAN)
                           .take(1))
-                        panel(
+                        disabledFeature(panel(
                             p,
                             Row(children: [
                               const Icon(Icons.calendar_month,
@@ -327,7 +328,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ]),
                             color: s.dark ? p.surface : const Color(0xFFFFFBEB),
                             padding: 14,
-                            radius: 16),
+                            radius: 16)),
                       gap(14),
                       CashFlowCard(
                           state: s,
@@ -408,35 +409,39 @@ class ServiceTile extends StatelessWidget {
   final Color color;
   final Palette p;
   final VoidCallback onTap;
+  final bool enabled;
   const ServiceTile(
       {super.key,
       required this.label,
       required this.icon,
       required this.color,
       required this.p,
-      required this.onTap});
+      required this.onTap,
+      this.enabled = true});
   @override
-  Widget build(BuildContext context) => InkWell(
-      onTap: onTap,
-      child: Column(children: [
-        Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-                color: color.withValues(alpha: .12),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: color.withValues(alpha: .2))),
-            child: Icon(icon, color: color, size: 26)),
-        gap(6),
-        SizedBox(
-            height: 28,
-            child: text(label,
-                size: 10.5,
-                color: p.ink,
-                align: TextAlign.center,
-                lines: 2,
-                weight: FontWeight.w500))
-      ]));
+  Widget build(BuildContext context) => Opacity(
+      opacity: enabled ? 1 : .4,
+      child: InkWell(
+          onTap: enabled ? onTap : null,
+          child: Column(children: [
+            Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                    color: color.withValues(alpha: .12),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: color.withValues(alpha: .2))),
+                child: Icon(icon, color: color, size: 26)),
+            gap(6),
+            SizedBox(
+                height: 28,
+                child: text(label,
+                    size: 10.5,
+                    color: p.ink,
+                    align: TextAlign.center,
+                    lines: 2,
+                    weight: FontWeight.w500))
+          ])));
 }
 
 class CashFlowCard extends StatelessWidget {

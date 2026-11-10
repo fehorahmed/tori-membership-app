@@ -393,7 +393,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               gradient: true, busy: busy, icon: Icons.arrow_forward_rounded),
           gap(4),
           Center(
-            child: InkWell(
+            child: disabledFeature(InkWell(
                 borderRadius: BorderRadius.circular(10),
                 onTap: () {
                   toast(
@@ -415,22 +415,18 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                           size: 13,
                           weight: FontWeight.w600,
                           color: const Color(0xFF0D9488))
-                    ]))),
+                    ])))),
           )
         ])),
         gap(20),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           text(tr("Don't have an account? ", 'অ্যাকাউন্ট নেই? '),
               size: 13.5, color: p.muted),
-          link(tr('Register Now', 'নিবন্ধন করুন'),
-              () => go(AuthStep.registration),
-              size: 13.5)
+          link(tr('Register Now', 'নিবন্ধন করুন'), null, size: 13.5)
         ]),
         gap(10),
-        link(
-            tr('Need Help? Contact Support', 'সাহায্য প্রয়োজন? যোগাযোগ করুন'),
-            () => toast(context,
-                tr('TORI 24/7 Helpline: 16789', 'তোরী হেল্পলাইন: ১৬৭৮৯')),
+        link(tr('Need Help? Contact Support', 'সাহায্য প্রয়োজন? যোগাযোগ করুন'),
+            null,
             size: 12)
       ]);
   Widget pinCard() => card(stack([

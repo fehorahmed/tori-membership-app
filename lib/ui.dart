@@ -167,13 +167,15 @@ Widget secondary(String label, VoidCallback? action, Palette p,
                   child: text(label,
                       size: 13, color: p.primary, align: TextAlign.center))
             ])));
-Widget link(String value, VoidCallback action,
+Widget link(String value, VoidCallback? action,
         {Color color = const Color(0xFF0D9488), double size = 12}) =>
-    InkWell(
-        onTap: action,
-        child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: text(value, size: size, color: color)));
+    Opacity(
+        opacity: action == null ? .4 : 1,
+        child: InkWell(
+            onTap: action,
+            child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: text(value, size: size, color: color))));
 void toast(BuildContext context, String message) =>
     ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message), duration: const Duration(seconds: 3)));
@@ -217,7 +219,7 @@ Widget sectionTitle(String title, Palette p,
       Expanded(
           child:
               text(title, size: 16, color: p.ink, family: 'PlusJakartaSans')),
-      if (action != null) link(action, onAction ?? () {}, color: p.primary)
+      if (action != null) link(action, onAction, color: p.primary)
     ]);
 Widget infoRow(String title, String value, Palette p, {Color? valueColor}) =>
     Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -227,8 +229,9 @@ Widget infoRow(String title, String value, Palette p, {Color? valueColor}) =>
           child: text(value,
               size: 13, color: valueColor ?? p.ink, align: TextAlign.right))
     ]);
-Widget tabs(List<String> options, int selected, ValueChanged<int> onTap,
-        Palette p) =>
+Widget tabs(
+        List<String> options, int selected, ValueChanged<int> onTap, Palette p,
+        {Set<int>? enabledIndices}) =>
     Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
@@ -237,7 +240,9 @@ Widget tabs(List<String> options, int selected, ValueChanged<int> onTap,
           for (int i = 0; i < options.length; i++)
             Expanded(
                 child: InkWell(
-                    onTap: () => onTap(i),
+                    onTap: enabledIndices == null || enabledIndices.contains(i)
+                        ? () => onTap(i)
+                        : null,
                     child: AnimatedContainer(
                         duration: const Duration(milliseconds: 180),
                         padding: const EdgeInsets.symmetric(
@@ -254,7 +259,12 @@ Widget tabs(List<String> options, int selected, ValueChanged<int> onTap,
                                 : null),
                         child: text(options[i],
                             size: 11,
-                            color: i == selected ? p.primary : p.muted,
+                            color: (enabledIndices != null &&
+                                    !enabledIndices.contains(i))
+                                ? p.muted.withValues(alpha: .4)
+                                : i == selected
+                                    ? p.primary
+                                    : p.muted,
                             align: TextAlign.center))))
         ]));
 ThemeData buildTheme(bool dark) {
@@ -345,3 +355,11 @@ class Ground extends StatelessWidget {
       decoration: BoxDecoration(gradient: Palette(state.dark).background),
       child: child);
 }
+
+/// Keep planned features visible without allowing unsynchronised actions.
+Widget disabledFeature(Widget child) => Tooltip(
+      message: 'Not available yet / এখনও চালু হয়নি',
+      child: Semantics(
+          enabled: false,
+          child: Opacity(opacity: .4, child: AbsorbPointer(child: child))),
+    );
