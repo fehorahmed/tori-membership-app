@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -25,185 +27,145 @@ class ApiConfig {
 }
 
 class AuthService {
-  /// Step 1: Submit mobile number to initiate login and send OTP
-  static Future<Map<String, dynamic>> initiateLogin(String rawMobile, {String language = 'en'}) async {
-    final cleanMobile = rawMobile.replaceAll(RegExp(r'[^0-9]'), '');
-    try {
-      final response = await http.post(
-        Uri.parse('${ApiConfig.membershipAuthUrl}/initiate'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Accept-Language': language,
-        },
-        body: jsonEncode({'mobile_no': cleanMobile}),
-      );
+  static http.Client client = http.Client();
+  static const deviceIdKey = 'membership_installation_id';
 
-      final data = jsonDecode(response.body);
-      if (response.statusCode == 200 && data['success'] == true) {
-        return {
-          'success': true,
-          'message': data['message'],
-          'data': data['data'],
-        };
-      } else {
-        return {
-          'success': false,
-          'message': data['message'] ?? (language == 'bn' ? 'মোবাইল নম্বর যাচাই ব্যর্থ হয়েছে।' : 'Mobile number verification failed.'),
-        };
-      }
-    } catch (e) {
+  static String normalizeMobile(String raw) {
+    final mobile = raw.replaceAll(RegExp(r'[^0-9]'), '');
+    if (mobile.startsWith('880')) return '0${mobile.substring(3)}';
+    if (mobile.length == 10 && mobile.startsWith('1')) return '0$mobile';
+    return mobile;
+  }
+
+  static String trustedKey(String mobile) =>
+      'membership_device_${normalizeMobile(mobile)}';
+
+  static Future<Map<String, dynamic>> device(String mobile) async {
+    final prefs = await SharedPreferences.getInstance();
+    var id = prefs.getString(deviceIdKey);
+    if (id == null) {
+      final random = Random.secure();
+      id = base64UrlEncode(List<int>.generate(32, (_) => random.nextInt(256)))
+          .replaceAll('=', '');
+      await prefs.setString(deviceIdKey, id);
+    }
+    return {
+      'device_id': id,
+      'device_token': prefs.getString(trustedKey(mobile)),
+      'device_name':
+          kIsWeb ? 'TORI Browser' : 'TORI ${defaultTargetPlatform.name}',
+      'platform': kIsWeb ? 'web' : defaultTargetPlatform.name,
+    };
+  }
+
+  static Future<Map<String, dynamic>> post(
+      String endpoint, Map<String, dynamic> body, String language) async {
+    try {
+      final response = await client
+          .post(Uri.parse('${ApiConfig.membershipAuthUrl}/$endpoint'),
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Accept-Language': language
+              },
+              body: jsonEncode(body))
+          .timeout(const Duration(seconds: 30));
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200 && data['success'] == true) return data;
+      return {
+        ...data,
+        'success': false,
+        'message': data['message'] ??
+            (language == 'bn'
+                ? 'লগইন করা যায়নি। আবার চেষ্টা করুন।'
+                : 'Unable to sign in. Please try again.')
+      };
+    } catch (_) {
       return {
         'success': false,
         'message': language == 'bn'
             ? 'সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি। আবার চেষ্টা করুন।'
-            : 'Unable to connect to the server. Please try again.',
+            : 'Unable to connect to the server. Please try again.'
       };
     }
   }
 
-  /// Step 2: Verify 6-digit OTP
-  static Future<Map<String, dynamic>> verifyOtp({
-    required String rawMobile,
-    required String otp,
-    String language = 'en',
-  }) async {
-    final cleanMobile = rawMobile.replaceAll(RegExp(r'[^0-9]'), '');
-    try {
-      final response = await http.post(
-        Uri.parse('${ApiConfig.membershipAuthUrl}/verify-otp'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Accept-Language': language,
-        },
-        body: jsonEncode({'mobile_no': cleanMobile, 'otp': otp}),
-      );
-
-      final data = jsonDecode(response.body);
-      if (response.statusCode == 200 && data['success'] == true) {
-        return {
-          'success': true,
-          'message': data['message'],
-          'data': data['data'],
-        };
-      } else {
-        return {
-          'success': false,
-          'message': data['message'] ?? (language == 'bn' ? 'ভুল বা মেয়াদোত্তীর্ণ ওটিপি।' : 'Incorrect or expired OTP.'),
-        };
-      }
-    } catch (e) {
-      return {
-        'success': false,
-        'message': language == 'bn'
-            ? 'সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি। আবার চেষ্টা করুন।'
-            : 'Unable to connect to the server. Please try again.',
-      };
-    }
+  static Future<void> saveLogin(
+      Map<String, dynamic> result, String mobile) async {
+    if (result['success'] != true) return;
+    final prefs = await SharedPreferences.getInstance();
+    final data = result['data'];
+    if (data['token'] != null)
+      await prefs.setString(ApiConfig.tokenKey, data['token']);
+    if (data['device_token'] != null)
+      await prefs.setString(trustedKey(mobile), data['device_token']);
   }
 
-  /// Step 3 (A): Login with 6-digit PIN
-  static Future<Map<String, dynamic>> loginWithPin({
-    required String rawMobile,
-    required String pin,
-    required String verificationToken,
-    String? deviceName,
-    String language = 'en',
-  }) async {
-    final cleanMobile = rawMobile.replaceAll(RegExp(r'[^0-9]'), '');
-    try {
-      final response = await http.post(
-        Uri.parse('${ApiConfig.membershipAuthUrl}/login-pin'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Accept-Language': language,
+  static Future<Map<String, dynamic>> initiateLogin(String rawMobile,
+      {String language = 'en', bool resetPin = false}) async {
+    return post(
+        'initiate',
+        {
+          ...await device(rawMobile),
+          'mobile_no': normalizeMobile(rawMobile),
+          'reset_pin': resetPin
         },
-        body: jsonEncode({
-          'mobile_no': cleanMobile,
+        language);
+  }
+
+  static Future<Map<String, dynamic>> verifyOtp(
+      {required String rawMobile,
+      required String otp,
+      String language = 'en'}) async {
+    return post(
+        'verify-otp',
+        {
+          ...await device(rawMobile),
+          'mobile_no': normalizeMobile(rawMobile),
+          'otp': otp
+        },
+        language);
+  }
+
+  static Future<Map<String, dynamic>> loginWithPin(
+      {required String rawMobile,
+      required String pin,
+      String? verificationToken,
+      String? deviceName,
+      String language = 'en'}) async {
+    final result = await post(
+        'login-pin',
+        {
+          ...await device(rawMobile),
+          'mobile_no': normalizeMobile(rawMobile),
           'pin': pin,
-          'verification_token': verificationToken,
-          'device_name': deviceName ?? 'Flutter Mobile App',
-        }),
-      );
-
-      final data = jsonDecode(response.body);
-      if (response.statusCode == 200 && data['success'] == true) {
-        final prefs = await SharedPreferences.getInstance();
-        if (data['data']['token'] != null) {
-          await prefs.setString(ApiConfig.tokenKey, data['data']['token']);
-        }
-        return {
-          'success': true,
-          'message': data['message'],
-          'data': data['data'],
-        };
-      } else {
-        return {
-          'success': false,
-          'message': data['message'] ?? (language == 'bn' ? 'ভুল পিন দিয়েছেন।' : 'Incorrect PIN.'),
-        };
-      }
-    } catch (e) {
-      return {
-        'success': false,
-        'message': language == 'bn'
-            ? 'সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি। আবার চেষ্টা করুন।'
-            : 'Unable to connect to the server. Please try again.',
-      };
-    }
+          if (verificationToken != null)
+            'verification_token': verificationToken,
+          if (deviceName != null) 'device_name': deviceName
+        },
+        language);
+    await saveLogin(result, rawMobile);
+    return result;
   }
 
-  /// Step 3 (B): Set / Reset 6-digit PIN
-  static Future<Map<String, dynamic>> setPin({
-    required String verificationToken,
-    required String pin,
-    required String pinConfirmation,
-    String? deviceName,
-    String language = 'en',
-  }) async {
-    try {
-      final response = await http.post(
-        Uri.parse('${ApiConfig.membershipAuthUrl}/set-pin'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Accept-Language': language,
-        },
-        body: jsonEncode({
+  static Future<Map<String, dynamic>> setPin(
+      {required String rawMobile,
+      required String verificationToken,
+      required String pin,
+      required String pinConfirmation,
+      String? deviceName,
+      String language = 'en'}) async {
+    final result = await post(
+        'set-pin',
+        {
+          ...await device(rawMobile),
           'verification_token': verificationToken,
           'pin': pin,
           'pin_confirmation': pinConfirmation,
-          'device_name': deviceName ?? 'Flutter Mobile App',
-        }),
-      );
-
-      final data = jsonDecode(response.body);
-      if (response.statusCode == 200 && data['success'] == true) {
-        final prefs = await SharedPreferences.getInstance();
-        if (data['data']['token'] != null) {
-          await prefs.setString(ApiConfig.tokenKey, data['data']['token']);
-        }
-        return {
-          'success': true,
-          'message': data['message'],
-          'data': data['data'],
-        };
-      } else {
-        return {
-          'success': false,
-          'message': data['message'] ?? (language == 'bn' ? 'পিন সংরক্ষণ ব্যর্থ হয়েছে।' : 'Failed to save your PIN.'),
-        };
-      }
-    } catch (e) {
-      return {
-        'success': false,
-        'message': language == 'bn'
-            ? 'সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি। আবার চেষ্টা করুন।'
-            : 'Unable to connect to the server. Please try again.',
-      };
-    }
+          if (deviceName != null) 'device_name': deviceName
+        },
+        language);
+    await saveLogin(result, rawMobile);
+    return result;
   }
 }
-

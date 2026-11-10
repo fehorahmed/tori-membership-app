@@ -40,6 +40,8 @@ The original archive is preserved separately in the delivery's `original-backup`
 
 ## Existing behavior
 
+Login is device-aware: a new installation verifies OTP before PIN login/setup; remembered installations sign in with phone and PIN. Device proof is saved separately per normalized phone. Forgot PIN uses OTP recovery. Clearing app/browser data requires OTP again. Local PIN fallback is disabled for sign-in. The backend needs the additive trusted-device migration; see its `docs/Membership/device-login.md` for protocol details.
+
 The provided native `ApiConfig.kt` has no configured backend. This port retains the transfer and loan-payment server errors rather than making these actions debit the displayed balance. Repository-level local simulation helpers remain available, as in the original repository. OTP, biometric sign-in, QR scanning and other simulated operations are inherited demo behavior, not live banking integrations. Debug OTP is `1234`; the supplied PIN is `982341`.
 
 ## Verification and limits

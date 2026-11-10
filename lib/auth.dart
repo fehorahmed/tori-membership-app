@@ -28,7 +28,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   bool consent = true, visible = false, busy = false, success = false;
   String? error;
   String? verificationToken;
-  bool hasPin = true;
+  bool hasPin = true, resettingPin = false;
   int countdown = 60;
   Timer? timer;
   ToriState get s => widget.state;
@@ -37,7 +37,16 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   @override
   void dispose() {
     timer?.cancel();
-    for (final c in [mobile, pin, confirmPin, otp, name, signupMobile, email, signupPin]) {
+    for (final c in [
+      mobile,
+      pin,
+      confirmPin,
+      otp,
+      name,
+      signupMobile,
+      email,
+      signupPin
+    ]) {
       c.dispose();
     }
     otpFocus.dispose();
@@ -72,25 +81,31 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     });
   }
 
-  Future<void> continueMobile() async {
+  Future<void> continueMobile({bool resetPin = false}) async {
     if (busy) return;
     setState(() {
       busy = true;
       error = null;
     });
 
-    final res = await AuthService.initiateLogin(mobile.text, language: s.bengali ? 'bn' : 'en');
+    final res = await AuthService.initiateLogin(mobile.text,
+        language: s.bengali ? 'bn' : 'en', resetPin: resetPin);
     if (!mounted) return;
     setState(() => busy = false);
 
     if (res['success'] == true) {
       final data = res['data'];
+      resettingPin = resetPin;
+      verificationToken = null;
+      pin.clear();
+      confirmPin.clear();
       hasPin = data['has_pin'] ?? true;
-      // If server returns debug_otp in local dev, prefill it for convenience
-      if (data['debug_otp'] != null) {
-        otp.text = data['debug_otp'].toString();
+      if (data['otp_required'] == false) {
+        go(AuthStep.pin);
+      } else {
+        go(AuthStep.otp);
+        if (data['debug_otp'] != null) otp.text = data['debug_otp'].toString();
       }
-      go(AuthStep.otp);
     } else {
       setState(() => error = res['message']);
     }
@@ -136,48 +151,34 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       error = null;
     });
 
-    // If verification token exists, authenticate with real backend API
-    if (verificationToken != null) {
-      if (!hasPin && pin.text != confirmPin.text) {
-        setState(() {
-          busy = false;
-          error = tr('PINs do not match. Please re-enter.', 'দুইটি পিন মেলেনি। পুনরায় দিন।');
-        });
-        return;
-      }
-
-      final res = hasPin
-          ? await AuthService.loginWithPin(
-              rawMobile: mobile.text,
-              pin: pin.text,
-              verificationToken: verificationToken!,
-              language: s.bengali ? 'bn' : 'en',
-            )
-          : await AuthService.setPin(
-              verificationToken: verificationToken!,
-              language: s.bengali ? 'bn' : 'en',
-              pin: pin.text,
-              pinConfirmation: confirmPin.text,
-            );
-
-      if (!mounted) return;
-      setState(() => busy = false);
-
-      if (res['success'] == true) {
-        s.login();
-      } else {
-        setState(() => error = res['message']);
-      }
+    if (!hasPin && (verificationToken == null || pin.text != confirmPin.text)) {
+      setState(() {
+        busy = false;
+        error = tr('PINs do not match. Please re-enter.',
+            'দুইটি পিন মেলেনি। পুনরায় দিন।');
+      });
+      return;
+    }
+    final result = hasPin
+        ? await AuthService.loginWithPin(
+            rawMobile: mobile.text,
+            pin: pin.text,
+            verificationToken: verificationToken,
+            language: s.bengali ? 'bn' : 'en')
+        : await AuthService.setPin(
+            rawMobile: mobile.text,
+            verificationToken: verificationToken!,
+            pin: pin.text,
+            pinConfirmation: confirmPin.text,
+            language: s.bengali ? 'bn' : 'en');
+    if (!mounted) return;
+    setState(() => busy = false);
+    if (result['success'] == true) {
+      s.login();
+    } else if (result['otp_required'] == true) {
+      await continueMobile();
     } else {
-      // Fallback local verification
-      await Future<void>.delayed(const Duration(milliseconds: 400));
-      if (!mounted) return;
-      setState(() => busy = false);
-      if (s.verifyPin(pin.text)) {
-        s.login();
-      } else {
-        setState(() => error = tr('Invalid Security PIN.', 'ভুল সিকিউরিটি পিন।'));
-      }
+      setState(() => error = result['message']);
     }
   }
 
@@ -242,7 +243,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                                 Icon(Icons.language,
                                                     size: 14, color: p.muted),
                                                 hgap(6),
-                                                text(s.bengali ? 'English' : 'বাংলা',
+                                                text(
+                                                    s.bengali
+                                                        ? 'English'
+                                                        : 'বাংলা',
                                                     size: 12,
                                                     weight: FontWeight.w600,
                                                     color: p.ink),
@@ -322,7 +326,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                  color: s.dark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                  color: s.dark
+                      ? const Color(0xFF1E293B)
+                      : const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                       color: error != null
@@ -336,7 +342,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     decoration: BoxDecoration(
                         color: s.dark ? const Color(0xFF0F172A) : Colors.white,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: p.border.withValues(alpha: 0.5))),
+                        border:
+                            Border.all(color: p.border.withValues(alpha: 0.5))),
                     child: Row(children: [
                       Container(
                           width: 18,
@@ -353,7 +360,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                       color: Color(0xFFF42A41),
                                       shape: BoxShape.circle)))),
                       hgap(6),
-                      text('+880', size: 14.5, weight: FontWeight.w600, color: p.ink),
+                      text('+880',
+                          size: 14.5, weight: FontWeight.w600, color: p.ink),
                     ])),
                 hgap(12),
                 Expanded(
@@ -371,8 +379,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                             isDense: true,
                             border: InputBorder.none,
                             hintText: '1XXX XXXXXX',
-                            hintStyle: font(16, color: p.muted.withValues(alpha: 0.5)),
-                            contentPadding: const EdgeInsets.symmetric(vertical: 12)))),
+                            hintStyle:
+                                font(16, color: p.muted.withValues(alpha: 0.5)),
+                            contentPadding:
+                                const EdgeInsets.symmetric(vertical: 12)))),
                 if (mobile.text.length >= 10)
                   const Icon(Icons.check_circle_rounded,
                       size: 20, color: Color(0xFF0D9488))
@@ -393,20 +403,19 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   go(AuthStep.otp);
                 },
                 child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.fingerprint_rounded,
-                              size: 20, color: Color(0xFF0D9488)),
-                          hgap(8),
-                          text(
-                              tr('Use Biometric Login',
-                                  'বায়োমেট্রিক দিয়ে লগইন করুন'),
-                              size: 13,
-                              weight: FontWeight.w600,
-                              color: const Color(0xFF0D9488))
-                        ]))),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const Icon(Icons.fingerprint_rounded,
+                          size: 20, color: Color(0xFF0D9488)),
+                      hgap(8),
+                      text(
+                          tr('Use Biometric Login',
+                              'বায়োমেট্রিক দিয়ে লগইন করুন'),
+                          size: 13,
+                          weight: FontWeight.w600,
+                          color: const Color(0xFF0D9488))
+                    ]))),
           )
         ])),
         gap(20),
@@ -437,7 +446,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           const Icon(Icons.circle, size: 6, color: Color(0xFF0D9488)),
           const Spacer(),
           if (hasPin)
-            link(tr('Forgot PIN?', 'পিন ভুলে গেছেন?'), () => go(AuthStep.forgot))
+            link(
+                tr('Forgot PIN?', 'পিন ভুলে গেছেন?'), () => go(AuthStep.forgot))
         ]),
         if (!hasPin)
           text(
@@ -472,8 +482,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                           color: p.ink, family: 'monospace', spacing: 10),
                       decoration: InputDecoration(
                           border: InputBorder.none,
-                          hintText: hasPin ? '••••••' : tr('Enter 6-digit PIN', '৬ ডিজিটের পিন দিন'),
-                          hintStyle: font(15, color: p.muted.withValues(alpha: .5), spacing: 0),
+                          hintText: hasPin
+                              ? '••••••'
+                              : tr('Enter 6-digit PIN', '৬ ডিজিটের পিন দিন'),
+                          hintStyle: font(15,
+                              color: p.muted.withValues(alpha: .5), spacing: 0),
                           contentPadding: EdgeInsets.zero))),
               IconButton(
                   onPressed: () => setState(() => visible = !visible),
@@ -514,8 +527,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                             color: p.ink, family: 'monospace', spacing: 10),
                         decoration: InputDecoration(
                             border: InputBorder.none,
-                            hintText: hasPin ? '••••••' : tr('Re-enter 6-digit PIN', 'পুনরায় ৬ ডিজিটের পিন দিন'),
-                            hintStyle: font(15, color: p.muted.withValues(alpha: .5), spacing: 0),
+                            hintText: hasPin
+                                ? '••••••'
+                                : tr('Re-enter 6-digit PIN',
+                                    'পুনরায় ৬ ডিজিটের পিন দিন'),
+                            hintStyle: font(15,
+                                color: p.muted.withValues(alpha: .5),
+                                spacing: 0),
                             contentPadding: EdgeInsets.zero))),
                 IconButton(
                     onPressed: () => setState(() => visible = !visible),
@@ -539,7 +557,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         ]),
         if (error != null) errorText(),
         primary(
-            hasPin ? tr('Login', 'লগইন') : tr('Set PIN & Continue', 'পিন সেভ ও প্রবেশ'),
+            hasPin
+                ? tr('Login', 'লগইন')
+                : tr('Set PIN & Continue', 'পিন সেভ ও প্রবেশ'),
             submitPin,
             gradient: true,
             busy: busy,
@@ -552,18 +572,19 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               onTap: submitPin,
               child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
-                  child:
-                      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    const Icon(Icons.fingerprint,
-                        color: Color(0xFF0D9488), size: 20),
-                    hgap(8),
-                    Flexible(
-                        child: text(
-                            tr('Login with Face ID / Fingerprint',
-                                'ফেস আইডি / ফিঙ্গারপ্রিন্ট দিয়ে লগইন'),
-                            size: 12.5,
-                            color: p.muted))
-                  ]))),
+                  child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.fingerprint,
+                            color: Color(0xFF0D9488), size: 20),
+                        hgap(8),
+                        Flexible(
+                            child: text(
+                                tr('Login with Face ID / Fingerprint',
+                                    'ফেস আইডি / ফিঙ্গারপ্রিন্ট দিয়ে লগইন'),
+                                size: 12.5,
+                                color: p.muted))
+                      ]))),
         ],
         Divider(height: 1, color: p.border),
         Center(
@@ -660,7 +681,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     size: 12,
                     color: p.muted)),
             primary(tr('Verify Code', 'কোড যাচাই করুন'),
-                otp.text.length == 4 ? verifyOtp : null,
+                otp.text.length == 6 ? verifyOtp : null,
                 gradient: true, busy: busy, icon: Icons.chevron_right),
             Center(
                 child: text(tr("Didn't receive code?", "কোড পাননি?"),
@@ -668,15 +689,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               link(tr('Resend via SMS', 'এসএমএস পাঠান'), () {
                 if (countdown == 0) {
-                  otp.clear();
-                  resetTimer();
+                  continueMobile(resetPin: resettingPin);
                 }
               }),
               hgap(16),
               link('WhatsApp', () {
                 if (countdown == 0) {
-                  otp.clear();
-                  resetTimer();
+                  continueMobile(resetPin: resettingPin);
                 }
               })
             ])
@@ -750,7 +769,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             color: p.muted),
         field(tr('Mobile Number', 'মোবাইল নম্বর'), mobile, p,
             keyboard: TextInputType.phone),
-        primary(tr('Request OTP', 'ওটিপি পাঠান'), () => go(AuthStep.otp),
+        primary(tr('Request OTP', 'ওটিপি পাঠান'),
+            () => continueMobile(resetPin: true),
             gradient: true),
         Center(
             child: link(tr('Back to Sign In', 'লগইনে ফিরে যান'),
