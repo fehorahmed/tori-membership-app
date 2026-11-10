@@ -100,10 +100,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                               });
                                           },
                                           child: AnimatedContainer(
-                                              duration: const Duration(milliseconds: 300),
+                                              duration: const Duration(
+                                                  milliseconds: 300),
                                               curve: Curves.easeInOut,
                                               height: 28,
-                                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 10),
                                               decoration: BoxDecoration(
                                                   color: p.surface,
                                                   border: Border.all(
@@ -121,27 +124,35 @@ class _HomeScreenState extends State<HomeScreen> {
                                                         color: Colors.white)),
                                                 hgap(6),
                                                 AnimatedSwitcher(
-                                                    duration: const Duration(milliseconds: 300),
-                                                    transitionBuilder: (child, animation) {
+                                                    duration: const Duration(
+                                                        milliseconds: 300),
+                                                    transitionBuilder:
+                                                        (child, animation) {
                                                       return SlideTransition(
                                                         position: Tween<Offset>(
-                                                          begin: const Offset(0.3, 0),
+                                                          begin: const Offset(
+                                                              0.3, 0),
                                                           end: Offset.zero,
                                                         ).animate(animation),
-                                                        child: FadeTransition(opacity: animation, child: child),
+                                                        child: FadeTransition(
+                                                            opacity: animation,
+                                                            child: child),
                                                       );
                                                     },
                                                     child: KeyedSubtree(
-                                                        key: ValueKey<bool>(revealed),
+                                                        key: ValueKey<bool>(
+                                                            revealed),
                                                         child: text(
                                                             revealed
-                                                                ? s.money(s.balance)
+                                                                ? s.money(
+                                                                    s.balance)
                                                                 : s.tr(
                                                                     'Tap for Balance',
                                                                     'ব্যালেন্স দেখুন'),
                                                             size: 12,
                                                             color: p.ink,
-                                                            weight: FontWeight.w600)))
+                                                            weight: FontWeight
+                                                                .w600)))
                                               ])))
                                     ]),
                                 hgap(14),
@@ -347,13 +358,31 @@ class _HomeScreenState extends State<HomeScreen> {
                       sectionTitle(
                           s.tr('Recent Transactions', 'সাম্প্রতিক লেনদেন'), p,
                           action: s.tr('View All', 'সব দেখুন'),
-                          onAction: () => s.navigate(AppNavTab.PAYMENTS)),
+                          onAction: () => showStatement(context, s)),
                       gap(10),
+                      Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed:
+                                s.dashboardLoading ? null : s.loadDashboardData,
+                            icon: const Icon(Icons.refresh, size: 18),
+                            label: Text(s.tr('Refresh', 'রিফ্রেশ')),
+                          )),
+                      if (s.dashboardLoading) const LinearProgressIndicator(),
+                      if (s.dashboardError != null)
+                        text(s.dashboardError!, color: p.error),
+                      if (s.transactions.isEmpty &&
+                          !s.dashboardLoading &&
+                          s.dashboardError == null)
+                        text(
+                            s.tr('No transactions yet.',
+                                'এখনও কোনো লেনদেন নেই।'),
+                            color: p.muted),
                       for (final t in s.transactions.take(3))
                         TransactionRow(
                             transaction: t,
                             state: s,
-                            onTap: () => showStatement(context, s)),
+                            onTap: () => showReceipt(context, s, t)),
                       gap(20)
                     ]))))
       ]);
@@ -513,10 +542,12 @@ class RiverChart extends CustomPainter {
             ..close(),
           Paint()
             ..shader = LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [color.withValues(alpha: .3), color.withValues(alpha: .02)])
-                .createShader(Offset.zero & s));
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  color.withValues(alpha: .3),
+                  color.withValues(alpha: .02)
+                ]).createShader(Offset.zero & s));
       c.drawPath(
           path,
           Paint()
@@ -670,7 +701,8 @@ class _PromoCarouselState extends State<PromoCarousel> {
                                           Icons.account_balance
                                         ][i],
                                         size: 160,
-                                        color: Colors.white.withValues(alpha: .15))),
+                                        color: Colors.white
+                                            .withValues(alpha: .15))),
                                 Padding(
                                     padding: const EdgeInsets.all(16),
                                     child: Column(
@@ -680,8 +712,8 @@ class _PromoCarouselState extends State<PromoCarousel> {
                                             MainAxisAlignment.spaceBetween,
                                         children: [
                                           pill(items[i][0], Colors.white,
-                                              background:
-                                                  Colors.white.withValues(alpha: .2)),
+                                              background: Colors.white
+                                                  .withValues(alpha: .2)),
                                           FractionallySizedBox(
                                               widthFactor: .75,
                                               child: text(items[i][1],
@@ -706,8 +738,9 @@ class _PromoCarouselState extends State<PromoCarousel> {
               height: 8,
               margin: const EdgeInsets.symmetric(horizontal: 3),
               decoration: BoxDecoration(
-                  color:
-                      Palette(s.dark).primary.withValues(alpha: i == index ? 1 : .2),
+                  color: Palette(s.dark)
+                      .primary
+                      .withValues(alpha: i == index ? 1 : .2),
                   borderRadius: BorderRadius.circular(4)))
       ])
     ]);

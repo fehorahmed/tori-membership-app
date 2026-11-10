@@ -335,17 +335,21 @@ class _StatementViewState extends State<StatementView> {
       final hay =
           '${t.titleEn} ${t.titleBn} ${t.txnId} ${t.categoryEn} ${t.categoryBn} ${t.note ?? ''} ${t.amount} ${s.money(t.amount)}'
               .toLowerCase();
-      final time = '${t.timeEn} ${t.timeBn}'.toLowerCase();
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final at = t.occurredAt;
       return hay.contains(query) &&
           (category == 'ALL' || t.categoryEn == category) &&
           (type == 0 || (type == 1 ? t.isCredit : !t.isCredit)) &&
-          switch (date) {
-            0 => true,
-            1 => time.contains('today') || time.contains('আজ'),
-            2 || 3 => ['today', 'yesterday', 'oct', 'আজ', 'গতকাল', 'অক্টোবর']
-                .any(time.contains),
-            _ => ['sep', 'aug', 'সেপ্টেম্বর', 'আগস্ট'].any(time.contains)
-          };
+          (date == 0 ||
+              (at != null &&
+                  !at.isAfter(now) &&
+                  switch (date) {
+                    1 => !at.isBefore(today),
+                    2 => !at.isBefore(today.subtract(const Duration(days: 6))),
+                    3 => !at.isBefore(DateTime(now.year, now.month)),
+                    _ => at.isBefore(DateTime(now.year, now.month)),
+                  }));
     }).toList();
     return pageBody([
       panel(
@@ -354,8 +358,8 @@ class _StatementViewState extends State<StatementView> {
             text(s.tr('Transaction History', 'লেনদেন ইতিহাস'),
                 size: 21, color: p.ink),
             text(
-                s.tr('Search, filter and review your account activity',
-                    'আপনার হিসাবের লেনদেন অনুসন্ধান ও পর্যালোচনা করুন'),
+                s.tr('Search and filter your latest 50 savings transactions',
+                    'সর্বশেষ ৫০টি সঞ্চয় লেনদেন অনুসন্ধান ও পর্যালোচনা করুন'),
                 size: 12,
                 color: p.muted),
             Row(children: [
@@ -504,6 +508,11 @@ Future<void> showReceipt(
                   s.bengali ? t.timeBn : t.timeEn, p),
               infoRow(s.tr('Category', 'বিভাগ'),
                   s.bengali ? t.categoryBn : t.categoryEn, p),
+              if (t.fee != null && t.fee! > 0) ...[
+                infoRow(s.tr('Amount before charge', 'চার্জ ছাড়া পরিমাণ'),
+                    s.money(t.netAmount ?? t.amount), p),
+                infoRow(s.tr('Charge', 'চার্জ'), s.money(t.fee!), p),
+              ],
               if (t.note != null) infoRow(s.tr('Note', 'নোট'), t.note!, p)
             ])),
         secondary(s.tr('Copy Receipt', 'রশিদ কপি করুন'), () {

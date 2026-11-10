@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_service.dart';
 
 class DashboardService {
+  static http.Client client = http.Client();
+
   /// Fetch real Dashboard Data for the authenticated customer
   static Future<Map<String, dynamic>> fetchDashboardData() async {
     try {
@@ -11,19 +13,22 @@ class DashboardService {
       final token = prefs.getString(ApiConfig.tokenKey);
 
       if (token == null) {
-        return {'success': false, 'message': 'টোকেন পাওয়া যায়নি। পুনরায় লগইন করুন।'};
+        return {
+          'success': false,
+          'message': 'টোকেন পাওয়া যায়নি। পুনরায় লগইন করুন।'
+        };
       }
 
-      final response = await http.get(
+      final response = await client.get(
         Uri.parse('${ApiConfig.membershipUrl}/dashboard'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'Authorization': 'Bearer $token',
         },
-      );
+      ).timeout(const Duration(seconds: 30));
 
-      final data = jsonDecode(response.body);
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
       if (response.statusCode == 200 && data['success'] == true) {
         return {
           'success': true,
@@ -43,4 +48,3 @@ class DashboardService {
     }
   }
 }
-

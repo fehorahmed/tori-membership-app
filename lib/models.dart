@@ -136,6 +136,9 @@ class TransactionItem {
   final String statusBn;
   final String iconType;
   final String txnId;
+  final DateTime? occurredAt;
+  final double? netAmount;
+  final double? fee;
   final String? note;
   const TransactionItem({
     required this.id,
@@ -151,8 +154,36 @@ class TransactionItem {
     required this.statusBn,
     required this.iconType,
     required this.txnId,
+    this.occurredAt,
+    this.netAmount,
+    this.fee,
     this.note = null,
   });
+  factory TransactionItem.fromJson(Map<String, dynamic> data) {
+    double number(dynamic value) => double.tryParse('$value') ?? 0;
+    final at = DateTime.tryParse(data['occurred_at'] ?? '')?.toLocal();
+    final time = at == null
+        ? ''
+        : '${at.year}-${at.month.toString().padLeft(2, '0')}-${at.day.toString().padLeft(2, '0')} ${at.hour.toString().padLeft(2, '0')}:${at.minute.toString().padLeft(2, '0')}';
+    return TransactionItem(
+        id: data['id'],
+        titleEn: data['title_en'],
+        titleBn: data['title_bn'],
+        timeEn: time,
+        timeBn: time,
+        categoryEn: data['category_en'],
+        categoryBn: data['category_bn'],
+        amount: number(data['amount']),
+        isCredit: data['is_credit'] == true,
+        statusEn: data['status_en'],
+        statusBn: data['status_bn'],
+        iconType: data['icon_type'] ?? 'transfer',
+        txnId: data['reference'],
+        note: data['note'],
+        occurredAt: at,
+        netAmount: number(data['net_amount']),
+        fee: number(data['fee']));
+  }
   TransactionItem copyWith({
     String? id,
     String? titleEn,
@@ -183,6 +214,9 @@ class TransactionItem {
         statusBn: statusBn ?? this.statusBn,
         iconType: iconType ?? this.iconType,
         txnId: txnId ?? this.txnId,
+        occurredAt: occurredAt,
+        netAmount: netAmount,
+        fee: fee,
         note: note ?? this.note,
       );
 }

@@ -20,7 +20,7 @@ class ToriState extends ChangeNotifier {
       'লোন কিস্তি পেমেন্ট সার্ভার এন্ডপয়েন্ট কনফিগার করা হয়নি (সততা নীতি লঙ্ঘন প্রতিরোধ)।');
   double balance = 160450;
   List<AccountItem> accounts = initialAccounts();
-  List<TransactionItem> transactions = initialTransactions();
+  List<TransactionItem> transactions = [];
   List<FavoriteContact> favorites = initialFavorites();
   List<NotificationItem> notifications = initialNotifications();
   List<SupportTicket> tickets = initialTickets();
@@ -96,7 +96,15 @@ class ToriState extends ChangeNotifier {
     changed();
   }
 
+  bool dashboardLoading = false;
+  String? dashboardError;
+  int _memberEpoch = 0;
+
   void logout() {
+    _memberEpoch++;
+    dashboardLoading = false;
+    dashboardError = null;
+    transactions = [];
     loggedIn = false;
     changed();
   }
@@ -108,6 +116,8 @@ class ToriState extends ChangeNotifier {
       ? value.length >= 4 && value.length <= 6
       : value == securityPin;
   void login() {
+    _memberEpoch++;
+    transactions = [];
     profile = profile.copyWith(
         fullName: '',
         mobileNumber: '',
@@ -169,11 +179,21 @@ class ToriState extends ChangeNotifier {
   }
 
   Future<void> loadDashboardData() async {
+    final epoch = _memberEpoch;
+    dashboardLoading = true;
+    dashboardError = null;
+    changed();
     final res = await DashboardService.fetchDashboardData();
+    if (epoch != _memberEpoch) return;
+    dashboardLoading = false;
     if (res['success'] == true && res['data'] != null) {
       final data = res['data'];
       final cust = data['customer'];
       final summary = data['summary'];
+      transactions = (data['recent_transactions'] as List? ?? [])
+          .map(
+              (row) => TransactionItem.fromJson(Map<String, dynamic>.from(row)))
+          .toList();
 
       // Update Profile with Real Backend Customer Data
       if (cust != null) {
@@ -194,6 +214,10 @@ class ToriState extends ChangeNotifier {
         _syncBalance();
       }
 
+      changed();
+    } else {
+      dashboardError = tr('Could not refresh transactions. Please retry.',
+          'লেনদেন রিফ্রেশ করা যায়নি। আবার চেষ্টা করুন।');
       changed();
     }
   }
