@@ -149,7 +149,7 @@ Widget primary(String label, VoidCallback? action,
                                   Icon(icon, color: Colors.white, size: 18)
                                 ]
                               ]))))));
-Widget secondary(String label, VoidCallback action, Palette p,
+Widget secondary(String label, VoidCallback? action, Palette p,
         {IconData? icon}) =>
     SizedBox(
         width: double.infinity,

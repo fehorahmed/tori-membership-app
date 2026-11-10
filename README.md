@@ -24,6 +24,10 @@ flutter run -d chrome --dart-define-from-file=.env
 
 ## Source layout
 
+`member_card.dart` displays the actual admin-issued membership card through `GET /api/membership/v1/card`, including current status, issue fee and print state. No card request or automatic issuance is performed. Members without an issued card see an empty state. Card numbers can be revealed/copied; demo CVV and expiry details have been removed.
+
+Profile and KYC are connected to the membership backend. `profile_setup.dart` and `services/profile_service.dart` load/save the member profile and submit a camera selfie plus separate NID front/back images (camera or gallery for NID). Each image is limited to 5 MB. KYC displays the server review status; rejected submissions can be submitted again. The backend needs the `customer_kycs` migration. Camera capture still requires physical-device testing; no automated liveness verification is included.
+
 - `auth.dart`: mobile, registration, recovery, OTP and PIN screens.
 - `dashboard.dart`: home services, favorites, loan reminder, chart, promotions and transactions.
 - `accounts.dart`, `payments.dart`, `payment_security.dart`: holdings and payment flows.

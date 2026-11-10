@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'models.dart';
 import 'seed_data.dart';
 import 'services/dashboard_service.dart';
+import 'services/profile_service.dart';
 
 /// State and local transaction behaviour preserved from ToriRepository.kt.
 class ToriState extends ChangeNotifier {
@@ -25,6 +26,7 @@ class ToriState extends ChangeNotifier {
   List<SupportTicket> tickets = initialTickets();
   UserProfile profile = initialProfile();
   KycDetails kyc = initialKyc();
+  Map<String, String> memberImageHeaders = {};
   NomineeInfo nominee = initialNominee();
   bool bengali = false, hidden = false, loggedIn = false;
   bool biometric = true, twoStep = false;
@@ -106,9 +108,64 @@ class ToriState extends ChangeNotifier {
       ? value.length >= 4 && value.length <= 6
       : value == securityPin;
   void login() {
+    profile = profile.copyWith(
+        fullName: '',
+        mobileNumber: '',
+        email: '',
+        address: '',
+        photoUrl: '',
+        mfiId: '',
+        mfiBranch: '',
+        isVerified: false,
+        kycStatus: 'Not submitted');
+    kyc = const KycDetails(
+        status: 'Not submitted',
+        nidNumber: '',
+        nidFrontUrl: '',
+        nidBackUrl: '',
+        selfieUrl: '',
+        submissionDate: '');
     loggedIn = true;
     changed();
     loadDashboardData();
+    loadMemberProfile();
+  }
+
+  void applyMemberProfile(Map<String, dynamic> data) {
+    final details = data['kyc'] as Map<String, dynamic>? ?? {};
+    final documents = details['documents'] is Map
+        ? Map<String, dynamic>.from(details['documents'])
+        : <String, dynamic>{};
+    profile = profile.copyWith(
+        fullName: data['name'] ?? '',
+        mobileNumber: data['mobile_no'] ?? '',
+        email: data['email'] ?? '',
+        address: data['address'] ?? '',
+        photoUrl: data['image'] ?? '',
+        mfiId: data['member_no'] ?? '',
+        isVerified: data['is_verified'] == true,
+        kycStatus: details['status'] ?? 'Not submitted');
+    kyc = KycDetails(
+        status: details['status'] ?? 'Not submitted',
+        nidNumber: details['nid_number'] ?? '',
+        nidFrontUrl: documents['nid_front'] ?? '',
+        nidBackUrl: documents['nid_back'] ?? '',
+        selfieUrl: documents['selfie'] ?? '',
+        submissionDate: details['submitted_at'] ?? '',
+        reviewerMessage: details['reviewer_message']);
+    changed();
+  }
+
+  Future<Map<String, dynamic>> loadMemberProfile(
+      {ProfileService? service}) async {
+    final client = service ?? ProfileService();
+    final result = await client.fetch(language: bengali ? 'bn' : 'en');
+    if (service == null) client.close();
+    if (result['success'] == true) {
+      memberImageHeaders = await ProfileService.headers();
+      applyMemberProfile(result['data']);
+    }
+    return result;
   }
 
   Future<void> loadDashboardData() async {
@@ -125,7 +182,6 @@ class ToriState extends ChangeNotifier {
           mobileNumber: cust['mobile_no'] ?? profile.mobileNumber,
           email: cust['email'] ?? profile.email,
           mfiId: cust['member_no'] ?? profile.mfiId,
-          photoUrl: cust['image'] ?? profile.photoUrl,
         );
       }
 

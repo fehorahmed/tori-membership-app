@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tori_mfi_bank/main.dart';
 import 'package:tori_mfi_bank/models.dart';
 import 'package:tori_mfi_bank/state.dart';
@@ -8,6 +9,7 @@ import 'package:tori_mfi_bank/profile.dart';
 import 'package:tori_mfi_bank/payment_security.dart';
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
   testWidgets('Authorization preserves the unconfigured backend and balance',
       (t) async {
     final s = ToriState();

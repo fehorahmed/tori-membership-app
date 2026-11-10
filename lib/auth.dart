@@ -79,7 +79,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       error = null;
     });
 
-    final res = await AuthService.initiateLogin(mobile.text);
+    final res = await AuthService.initiateLogin(mobile.text, language: s.bengali ? 'bn' : 'en');
     if (!mounted) return;
     setState(() => busy = false);
 
@@ -107,6 +107,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     final res = await AuthService.verifyOtp(
       rawMobile: mobile.text,
       otp: otp.text,
+      language: s.bengali ? 'bn' : 'en',
     );
 
     if (!mounted) return;
@@ -150,9 +151,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               rawMobile: mobile.text,
               pin: pin.text,
               verificationToken: verificationToken!,
+              language: s.bengali ? 'bn' : 'en',
             )
           : await AuthService.setPin(
               verificationToken: verificationToken!,
+              language: s.bengali ? 'bn' : 'en',
               pin: pin.text,
               pinConfirmation: confirmPin.text,
             );
@@ -218,6 +221,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                               BorderRadius.circular(20),
                                           onTap: () {
                                             s.setLanguage(!s.bengali);
+                                            setState(() => error = null);
                                           },
                                           child: Container(
                                             padding: const EdgeInsets.symmetric(

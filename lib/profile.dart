@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'models.dart';
@@ -7,7 +6,8 @@ import 'state.dart';
 import 'ui.dart';
 import 'dialogs.dart';
 import 'legal_copy.dart';
-import 'virtual_debit_card_widget.dart';
+import 'member_card.dart';
+import 'profile_setup.dart';
 
 class ProfileScreen extends StatelessWidget {
   final ToriState state;
@@ -40,9 +40,7 @@ class ProfileScreen extends StatelessWidget {
                           () => showMyProfile(context, s)),
                       profileRow(s.tr('KYC Status', 'কেওয়াইসি স্ট্যাটাস'),
                           Icons.shield_outlined, p, () => showKyc(context, s),
-                          badge: s.profile.isVerified
-                              ? 'Completed / Tier 2'
-                              : s.profile.kycStatus),
+                          badge: kycLabel(s, s.profile.kycStatus)),
                       profileRow(
                           s.tr('Nominee Information', 'নমিনী তথ্য'),
                           Icons.groups_outlined,
@@ -52,9 +50,8 @@ class ProfileScreen extends StatelessWidget {
                     group(s.tr('MY CARD', 'ডিজিটাল কার্ড'), p, [
                       profileRow(s.tr('My Card', 'আমার ডিজিটাল কার্ড'),
                           Icons.credit_card, p, () => showCard(context, s),
-                          subtitle: s.tr('TORI MFI Platinum Debit',
-                              'প্লাটিনাম ডেবিট কার্ড ও সেটিংস'),
-                          badge: s.tr('ACTIVE', 'সক্রিয়'))
+                          subtitle: s.tr('Membership card details',
+                              'মেম্বারশিপ কার্ডের বিস্তারিত'))
                     ]),
                     group(
                         s.tr('SECURITY & SETTINGS', 'নিরাপত্তা ও সেটিংস'), p, [
@@ -132,12 +129,15 @@ Widget group(String title, Palette p, List<Widget> children) => stack([
       text(title, size: 11, color: p.muted, spacing: .7),
       panel(
           p,
-          Column(children: [
-            for (int i = 0; i < children.length; i++) ...[
-              if (i > 0) Divider(height: 1, indent: 62, color: p.border),
-              children[i]
-            ]
-          ]),
+          Material(
+            type: MaterialType.transparency,
+            child: Column(children: [
+              for (int i = 0; i < children.length; i++) ...[
+                if (i > 0) Divider(height: 1, indent: 62, color: p.border),
+                children[i]
+              ]
+            ]),
+          ),
           padding: 0,
           radius: 18)
     ], spacing: 8);
@@ -231,135 +231,13 @@ Future<bool> verifyUpdate(
 }
 
 Future<void> showMyProfile(BuildContext context, ToriState s) async {
-  final name = TextEditingController(text: s.profile.fullName),
-      email = TextEditingController(text: s.profile.email),
-      address = TextEditingController(text: s.profile.address);
-  bool editing = false;
-  await openPage<void>(
-      context,
-      s,
-      s.tr('My Profile Details', 'আমার প্রোফাইল বিস্তারিত'),
-      (ctx) => StatefulBuilder(builder: (ctx, set) {
-            final p = Palette(s.dark);
-            return pageBody([
-              panel(
-                  p,
-                  stack([
-                    Center(
-                        child: CircleAvatar(
-                            radius: 36,
-                            backgroundColor: p.primary.withValues(alpha: .1),
-                            child: Icon(Icons.person,
-                                size: 38, color: p.primary))),
-                    Center(
-                        child:
-                            text(s.profile.fullName, size: 22, color: p.ink)),
-                    Center(child: pill(s.profile.memberType, p.primary)),
-                    text(
-                        s.tr('PERSONAL & ACCOUNT DETAILS',
-                            'ব্যক্তিগত ও একাউন্ট তথ্য'),
-                        size: 11,
-                        color: p.muted),
-                    if (editing) ...[
-                      field(s.tr('Full Name', 'পূর্ণ নাম'), name, p),
-                      field(s.tr('Email', 'ইমেইল'), email, p,
-                          keyboard: TextInputType.emailAddress),
-                      field(s.tr('Address', 'ঠিকানা'), address, p, lines: 3)
-                    ] else ...[
-                      infoRow('Full Name', s.profile.fullName, p),
-                      infoRow('Mobile Number', s.profile.mobileNumber, p),
-                      infoRow('Email', s.profile.email, p),
-                      infoRow('Address', s.profile.address, p)
-                    ],
-                    Divider(color: p.border),
-                    text(
-                        s.tr('Institutional Profile', 'প্রাতিষ্ঠানিক প্রোফাইল'),
-                        size: 16,
-                        color: p.ink),
-                    infoRow('MFI Member ID', s.profile.mfiId, p),
-                    infoRow('MFI Branch', s.profile.mfiBranch, p),
-                    infoRow('Relationship', s.profile.relationship, p),
-                    infoRow('KYC Status', s.profile.kycStatus, p)
-                  ])),
-              primary(
-                  editing
-                      ? s.tr('Save Changes', 'পরিবর্তন সংরক্ষণ')
-                      : s.tr('Edit Profile', 'প্রোফাইল পরিবর্তন'), () async {
-                if (!editing) {
-                  set(() => editing = true);
-                  return;
-                }
-                if (await verifyUpdate(
-                    ctx,
-                    s,
-                    s.tr('Verify Profile Update',
-                        'প্রোফাইল পরিবর্তন নিশ্চিতকরণ'))) {
-                  s.profile = s.profile.copyWith(
-                      fullName: name.text,
-                      email: email.text,
-                      address: address.text);
-                  s.changed();
-                  if (ctx.mounted) set(() => editing = false);
-                }
-              })
-            ]);
-          }));
-  name.dispose();
-  email.dispose();
-  address.dispose();
+  await openPage<void>(context, s, s.tr('My Profile', 'আমার প্রোফাইল'),
+      (_) => ProfileDetailsPage(state: s));
 }
 
 Future<void> showKyc(BuildContext context, ToriState s) async {
-  await openPage<void>(
-      context,
-      s,
-      s.tr('Kyc Verification Status', 'কেওয়াইসি স্ট্যাটাস'),
-      (ctx) => StatefulBuilder(builder: (ctx, set) {
-            final p = Palette(s.dark);
-            return pageBody([
-              Center(
-                  child: Icon(Icons.verified_user_outlined,
-                      size: 64, color: p.primary)),
-              Center(child: text(s.kyc.status, size: 24, color: p.ink)),
-              Center(child: pill('Completed / Tier 2', p.primary)),
-              panel(
-                  p,
-                  stack([
-                    infoRow('National ID (NID)', s.kyc.nidNumber, p),
-                    infoRow('Submission Date', s.kyc.submissionDate, p),
-                    infoRow('Verification Status', s.kyc.status, p),
-                    text(s.kyc.reviewerMessage ?? '', size: 12, color: p.muted)
-                  ])),
-              for (final item in [
-                ('NID Front', s.kyc.nidFrontUrl),
-                ('NID Back', s.kyc.nidBackUrl),
-                ('Live Selfie', s.kyc.selfieUrl)
-              ])
-                panel(
-                    p,
-                    stack([
-                      text(item.$1, color: p.ink),
-                      ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.network(item.$2,
-                              height: 140,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => SizedBox(
-                                  height: 140,
-                                  child: Center(
-                                      child: Icon(Icons.badge_outlined,
-                                          size: 50, color: p.muted)))))
-                    ])),
-              primary(
-                  s.tr('Update / Resubmit KYC', 'কেওয়াইসি আপডেট করুন'), () {}),
-              text(
-                  'Only submit if your legal address or personal details have changed',
-                  size: 11,
-                  color: p.muted,
-                  align: TextAlign.center),
-            ]);
-          }));
+  await openPage<void>(context, s, s.tr('Profile verification', 'প্রোফাইল যাচাই'),
+      (_) => KycSetupPage(state: s));
 }
 
 Future<void> showNominee(BuildContext context, ToriState s) async {
@@ -630,7 +508,7 @@ Future<void> showLegal(BuildContext context, ToriState s, bool terms) async {
           }));
 }
 
-Widget profilePhoto(String source, {double size = 76}) {
+Widget profilePhoto(String source, {double size = 76, Map<String, String>? headers}) {
   Widget fallback() => SizedBox(
       width: size,
       height: size,
@@ -647,6 +525,7 @@ Widget profilePhoto(String source, {double size = 76}) {
     }
   }
   return Image.network(source,
+      headers: headers,
       width: size,
       height: size,
       fit: BoxFit.cover,
@@ -675,7 +554,7 @@ Widget profileHero(BuildContext context, ToriState s, Palette p) => ClipRRect(
                     child: Stack(clipBehavior: Clip.none, children: [
                       ClipRRect(
                           borderRadius: BorderRadius.circular(16),
-                          child: profilePhoto(s.profile.photoUrl)),
+                          child: profilePhoto(s.profile.photoUrl, headers: s.memberImageHeaders)),
                       Positioned(
                           top: -3,
                           right: -3,
@@ -713,7 +592,9 @@ Widget profileHero(BuildContext context, ToriState s, Palette p) => ClipRRect(
                       size: 18, color: p.ink, family: 'PlusJakartaSans'),
                   Wrap(spacing: 6, runSpacing: 4, children: [
                     pill('★ TORI Prime', const Color(0xFF0F766E), size: 11),
-                    pill('✓ Verified', const Color(0xFF047857), size: 11)
+                    pill(kycLabel(s, s.profile.kycStatus),
+                        s.profile.isVerified ? const Color(0xFF047857) : p.muted,
+                        size: 11)
                   ]),
                   Row(children: [
                     Flexible(
@@ -735,167 +616,11 @@ Widget profileHero(BuildContext context, ToriState s, Palette p) => ClipRRect(
         ]),
         padding: 0,
         radius: 18));
-Future<void> showPhoto(BuildContext context, ToriState s) async {
-  Uint8List? selected;
-  await openPage<void>(
-      context,
-      s,
-      s.tr('Update Profile Photo', 'প্রোফাইল ছবি পরিবর্তন'),
-      (ctx) => StatefulBuilder(builder: (ctx, set) {
-            final p = Palette(s.dark);
-            return pageBody([
-              gap(20),
-              Center(
-                  child: Container(
-                      width: 180,
-                      height: 180,
-                      clipBehavior: Clip.antiAlias,
-                      decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: p.raised,
-                          border: Border.all(color: p.border, width: 2)),
-                      child: selected == null
-                          ? Icon(Icons.add_a_photo, size: 48, color: p.muted)
-                          : Image.memory(selected!, fit: BoxFit.cover))),
-              Center(
-                  child: text(
-                      selected == null
-                          ? s.tr('Select New Profile Picture',
-                              'নতুন ছবি নির্বাচন করুন')
-                          : s.tr('Confirm Selected Photo', 'ছবি নিশ্চিত করুন'),
-                      size: 18,
-                      color: p.ink)),
-              if (selected == null)
-                secondary(
-                    s.tr('Choose from Gallery', 'গ্যালারি থেকে নির্বাচন করুন'),
-                    () async {
-                  final picked = await ImagePicker()
-                      .pickImage(source: ImageSource.gallery);
-                  if (picked != null) {
-                    final bytes = await picked.readAsBytes();
-                    if (ctx.mounted) set(() => selected = bytes);
-                  }
-                }, p)
-              else ...[
-                primary(s.tr('Save & Update', 'সংরক্ষণ করুন'), () {
-                  s.profile = s.profile.copyWith(
-                      photoUrl:
-                          'data:image/png;base64,${base64Encode(selected!)}');
-                  s.changed();
-                  Navigator.pop(ctx);
-                  toast(
-                      context,
-                      s.tr('Profile photo updated successfully',
-                          'প্রোফাইল ছবি সফলভাবে আপডেট করা হয়েছে'));
-                }),
-                secondary(s.tr('Cancel', 'বাতিল করুন'),
-                    () => set(() => selected = null), p)
-              ]
-            ]);
-          }));
-}
+Future<void> showPhoto(BuildContext context, ToriState s) => showKyc(context, s);
 
 Future<void> showCard(BuildContext context, ToriState s) async {
-  bool visible = false;
-  String? copied;
-  await openPage<void>(
-      context,
-      s,
-      s.tr('My Card', 'আমার কার্ড'),
-      (ctx) => StatefulBuilder(builder: (ctx, set) {
-            const p = Palette(false);
-            final digits = s.profile.mfiId.replaceAll(RegExp(r'\D'), '');
-            final suffix = digits.length >= 4
-                    ? digits.substring(digits.length - 4)
-                    : '4929',
-                cvv = digits.length >= 3 ? digits.substring(0, 3) : '842';
-            final full = '4214 5890 1234 $suffix',
-                masked = '4214 •••• •••• $suffix';
-            final name = s.profile.fullName.toUpperCase();
-            Widget row(String key, String label, String value,
-                    {bool secret = false}) =>
-                Row(children: [
-                  Expanded(
-                      child: stack([
-                    text(label, size: 10, color: p.muted),
-                    text(value, size: 15, color: p.ink, family: 'monospace')
-                  ], spacing: 5)),
-                  IconButton(
-                      onPressed: secret && !visible
-                          ? null
-                          : () {
-                              Clipboard.setData(ClipboardData(text: value));
-                              HapticFeedback.mediumImpact();
-                              set(() => copied = key);
-                              toast(
-                                  ctx,
-                                  s.tr(
-                                      'Copied to clipboard', 'কপি করা হয়েছে'));
-                            },
-                      icon: Icon(copied == key ? Icons.check : Icons.copy,
-                          size: 18, color: p.primary))
-                ]);
-            return ColoredBox(
-                color: p.ground,
-                child: pageBody([
-                  Center(
-                      child: pill(
-                          s.tr('ACTIVE • PLATINUM DEBIT',
-                              'সক্রিয় • প্লাটিনাম ডেবিট'),
-                          p.primary)),
-                  VirtualDebitCardWidget(
-                      cardholderName: name,
-                      cardNumber: visible ? full : masked,
-                      expiry: visible ? '08/29' : '••/••',
-                      mfiId: s.profile.mfiId,
-                      isBengali: s.bengali),
-                  secondary(
-                      visible
-                          ? s.tr('Hide Card Information', 'কার্ডের তথ্য লুকান')
-                          : s.tr('Show Card Information', 'কার্ডের তথ্য দেখুন'),
-                      () => set(() => visible = !visible),
-                      p,
-                      icon: visible ? Icons.visibility_off : Icons.visibility),
-                  panel(
-                      p,
-                      stack([
-                        text(s.tr('Card Information', 'কার্ডের বিস্তারিত তথ্য'),
-                            size: 18, color: p.ink),
-                        text(
-                            s.tr('Credentials for online & POS payment',
-                                'পেমেন্টের জন্য প্রয়োজনীয় তথ্য কপি করুন'),
-                            size: 11,
-                            color: p.muted),
-                        row('name', s.tr('CARDHOLDER NAME', 'কার্ডধারীর নাম'),
-                            name),
-                        Divider(color: p.border),
-                        row('number', s.tr('CARD NUMBER', 'কার্ড নম্বর'),
-                            visible ? full : masked,
-                            secret: true),
-                        Divider(color: p.border),
-                        Row(children: [
-                          Expanded(
-                              child: row('expiry', s.tr('EXPIRY DATE', 'মেয়াদ'),
-                                  visible ? '08/29' : '••/••',
-                                  secret: true)),
-                          Expanded(
-                              child: row('cvv', s.tr('CVV', 'সিভিভি'),
-                                  visible ? cvv : '•••',
-                                  secret: true))
-                        ]),
-                        Divider(color: p.border),
-                        row('mfi', s.tr('MFI MEMBER ID', 'এমএফআই সদস্য আইডি'),
-                            s.profile.mfiId)
-                      ])),
-                  Center(
-                      child: text(
-                          s.tr('MRA Certified MFI • PCI-DSS Certified',
-                              'এমআরএ অনুমোদিত • PCI-DSS সার্টিফাইড'),
-                          size: 10,
-                          color: p.muted,
-                          align: TextAlign.center))
-                ]));
-          }));
+  await openPage<void>(context, s, s.tr('My Card', 'আমার কার্ড'),
+      (_) => MemberCardPage(state: s));
 }
 
 Future<void> showSupport(BuildContext context, ToriState s) async {

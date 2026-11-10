@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 
 import 'card_colors.dart';
 
-/// Authentic TORI MFI Virtual Debit / Somriddhi Member Card Widget.
+/// TORI membership card using the issued backend card details.
 /// Rendered using Flutter CustomPainter for 100% crisp vector fidelity on all screen densities.
 /// Exactly conforms to standard banking CR80 aspect ratio (1.586:1).
 class VirtualDebitCardWidget extends StatelessWidget {
   final String cardholderName;
   final String cardNumber;
-  final String expiry;
+  final String issuedAt;
   final String mfiId;
   final bool isBengali;
   final bool isFrozen;
@@ -18,7 +18,7 @@ class VirtualDebitCardWidget extends StatelessWidget {
     super.key,
     required this.cardholderName,
     required this.cardNumber,
-    required this.expiry,
+    required this.issuedAt,
     required this.mfiId,
     required this.isBengali,
     this.isFrozen = false,
@@ -224,7 +224,7 @@ class VirtualDebitCardWidget extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                (isBengali ? 'মেয়াদ' : 'VALID THRU'),
+                                (isBengali ? 'ইস্যুর তারিখ' : 'ISSUED ON'),
                                 style: const TextStyle(
                                   color: Color(0xFF64748B),
                                   fontSize: 8,
@@ -233,7 +233,7 @@ class VirtualDebitCardWidget extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                expiry,
+                                issuedAt,
                                 style: const TextStyle(
                                   color: ToriColors.deepNavy,
                                   fontSize: 12.5,
@@ -251,7 +251,7 @@ class VirtualDebitCardWidget extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: const [
                             Text(
-                              'VISA',
+                              'TORI',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 20,
@@ -261,7 +261,7 @@ class VirtualDebitCardWidget extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              'DEBIT',
+                              'MEMBER',
                               style: TextStyle(
                                 color: ToriColors.vividCyan,
                                 fontSize: 8,
@@ -290,13 +290,13 @@ class VirtualDebitCardWidget extends StatelessWidget {
                           color: ToriColors.criticalRose,
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(Icons.lock, color: Colors.white, size: 16),
                             SizedBox(width: 6),
                             Text(
-                              'CARD FROZEN',
+                              isBengali ? 'কার্ড নিষ্ক্রিয়' : 'CARD INACTIVE',
                               style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,

@@ -26,12 +26,16 @@ class ApiConfig {
 
 class AuthService {
   /// Step 1: Submit mobile number to initiate login and send OTP
-  static Future<Map<String, dynamic>> initiateLogin(String rawMobile) async {
+  static Future<Map<String, dynamic>> initiateLogin(String rawMobile, {String language = 'en'}) async {
     final cleanMobile = rawMobile.replaceAll(RegExp(r'[^0-9]'), '');
     try {
       final response = await http.post(
         Uri.parse('${ApiConfig.membershipAuthUrl}/initiate'),
-        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Accept-Language': language,
+        },
         body: jsonEncode({'mobile_no': cleanMobile}),
       );
 
@@ -45,13 +49,15 @@ class AuthService {
       } else {
         return {
           'success': false,
-          'message': data['message'] ?? 'মোবাইল নম্বর যাচাই ব্যর্থ হয়েছে।',
+          'message': data['message'] ?? (language == 'bn' ? 'মোবাইল নম্বর যাচাই ব্যর্থ হয়েছে।' : 'Mobile number verification failed.'),
         };
       }
     } catch (e) {
       return {
         'success': false,
-        'message': 'সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি ($e)',
+        'message': language == 'bn'
+            ? 'সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি। আবার চেষ্টা করুন।'
+            : 'Unable to connect to the server. Please try again.',
       };
     }
   }
@@ -60,12 +66,17 @@ class AuthService {
   static Future<Map<String, dynamic>> verifyOtp({
     required String rawMobile,
     required String otp,
+    String language = 'en',
   }) async {
     final cleanMobile = rawMobile.replaceAll(RegExp(r'[^0-9]'), '');
     try {
       final response = await http.post(
         Uri.parse('${ApiConfig.membershipAuthUrl}/verify-otp'),
-        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Accept-Language': language,
+        },
         body: jsonEncode({'mobile_no': cleanMobile, 'otp': otp}),
       );
 
@@ -79,13 +90,15 @@ class AuthService {
       } else {
         return {
           'success': false,
-          'message': data['message'] ?? 'ভুল বা মেয়াদোত্তীর্ণ ওটিপি।',
+          'message': data['message'] ?? (language == 'bn' ? 'ভুল বা মেয়াদোত্তীর্ণ ওটিপি।' : 'Incorrect or expired OTP.'),
         };
       }
     } catch (e) {
       return {
         'success': false,
-        'message': 'সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি ($e)',
+        'message': language == 'bn'
+            ? 'সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি। আবার চেষ্টা করুন।'
+            : 'Unable to connect to the server. Please try again.',
       };
     }
   }
@@ -96,12 +109,17 @@ class AuthService {
     required String pin,
     required String verificationToken,
     String? deviceName,
+    String language = 'en',
   }) async {
     final cleanMobile = rawMobile.replaceAll(RegExp(r'[^0-9]'), '');
     try {
       final response = await http.post(
         Uri.parse('${ApiConfig.membershipAuthUrl}/login-pin'),
-        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Accept-Language': language,
+        },
         body: jsonEncode({
           'mobile_no': cleanMobile,
           'pin': pin,
@@ -124,13 +142,15 @@ class AuthService {
       } else {
         return {
           'success': false,
-          'message': data['message'] ?? 'ভুল পিন দিয়েছেন।',
+          'message': data['message'] ?? (language == 'bn' ? 'ভুল পিন দিয়েছেন।' : 'Incorrect PIN.'),
         };
       }
     } catch (e) {
       return {
         'success': false,
-        'message': 'সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি ($e)',
+        'message': language == 'bn'
+            ? 'সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি। আবার চেষ্টা করুন।'
+            : 'Unable to connect to the server. Please try again.',
       };
     }
   }
@@ -141,11 +161,16 @@ class AuthService {
     required String pin,
     required String pinConfirmation,
     String? deviceName,
+    String language = 'en',
   }) async {
     try {
       final response = await http.post(
         Uri.parse('${ApiConfig.membershipAuthUrl}/set-pin'),
-        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Accept-Language': language,
+        },
         body: jsonEncode({
           'verification_token': verificationToken,
           'pin': pin,
@@ -168,13 +193,15 @@ class AuthService {
       } else {
         return {
           'success': false,
-          'message': data['message'] ?? 'পিন সংরক্ষণ ব্যর্থ হয়েছে।',
+          'message': data['message'] ?? (language == 'bn' ? 'পিন সংরক্ষণ ব্যর্থ হয়েছে।' : 'Failed to save your PIN.'),
         };
       }
     } catch (e) {
       return {
         'success': false,
-        'message': 'সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি ($e)',
+        'message': language == 'bn'
+            ? 'সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি। আবার চেষ্টা করুন।'
+            : 'Unable to connect to the server. Please try again.',
       };
     }
   }
