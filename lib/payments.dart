@@ -6,6 +6,7 @@ import 'ui.dart';
 import 'dashboard.dart';
 import 'dialogs.dart';
 import 'payment_security.dart';
+import 'cashout.dart';
 
 class PaymentsScreen extends StatefulWidget {
   final ToriState state;
@@ -163,6 +164,13 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
       padding: 14);
   Widget hub() => stack([
         source(),
+        hubAction(
+            s.tr('Branch Cash Out', 'শাখা থেকে ক্যাশ আউট'),
+            s.tr('Withdraw your Shomriddhi savings',
+                'সমৃদ্ধি সঞ্চয় থেকে নগদ তুলুন'),
+            Icons.payments,
+            p.primary,
+            () => showCashout(context, s)),
         tabs([
           s.tr('Transfer', 'ট্রান্সফার'),
           s.tr('Pay Bills', 'বিল পে'),
@@ -284,12 +292,12 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
             next(1);
           }),
           hubAction(
-              s.tr('Agent Cashout', 'এজেন্ট ক্যাশ আউট'),
-              s.tr('Withdraw from MFS Agent', 'এমএফএস এজেন্ট থেকে উত্তোলন'),
+              s.tr('Branch Cash Out', 'শাখা থেকে ক্যাশ আউট'),
+              s.tr('Scan branch QR to withdraw savings',
+                  'শাখার কিউআর স্ক্যান করে সঞ্চয় তুলুন'),
               Icons.payments,
               p.primary, () {
-            s.channel = TransferChannel.BKASH_NAGAD;
-            next(1);
+            showCashout(context, s);
           })
         ],
         sectionTitle(s.tr('Recent Payments', 'সাম্প্রতিক পেমেন্ট'), p,

@@ -4,7 +4,7 @@ Flutter application derived from the supplied TORI Android source, with the supp
 
 ## Run
 
-Validated with Flutter 3.24.5 / Dart 3.5.4:
+Current checks use Flutter 3.47.9 / Dart 3.13.7. The QR scanner dependency requires Flutter 3.29 or newer:
 
 ```sh
 flutter pub get
@@ -23,6 +23,8 @@ flutter run -d chrome --dart-define-from-file=.env
 ```
 
 ## Source layout
+
+`cashout.dart` and `services/cashout_service.dart` implement **Payments → Branch Cash Out**: scan the branch QR, review the server amount/charge, confirm with PIN, and follow the branch request status. Cash-out uses existing Shomriddhi savings and never posts financial changes locally. Pending holds, cancellation, expiry and timeout-safe retries are handled by the backend. The ERP must configure and enable cash-out settings/counter first. QR scanning requires camera permission and, on the web, HTTPS/localhost. Verify camera scanning on a real phone before operational use.
 
 `member_card.dart` displays the actual admin-issued membership card through `GET /api/membership/v1/card`, including current status, issue fee and print state. No card request or automatic issuance is performed. Members without an issued card see an empty state. Card numbers can be revealed/copied; demo CVV and expiry details have been removed.
 
