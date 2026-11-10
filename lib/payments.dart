@@ -1,3 +1,4 @@
+import 'send_money.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'models.dart';
@@ -40,6 +41,10 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
   }
 
   void next(int value) {
+    if (value == 1 && s.channel == TransferChannel.TORI_ACCOUNT) {
+      showSendMoney(context, s);
+      return;
+    }
     FocusScope.of(context).unfocus();
     setState(() {
       step = value;
@@ -49,6 +54,10 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
 
   void favorite(FavoriteContact f) {
     s.selectFavorite(f);
+    if (s.channel == TransferChannel.TORI_ACCOUNT) {
+      showSendMoney(context, s, initialRecipient: f.number);
+      return;
+    }
     recipient.text = f.number;
     next(2);
   }
@@ -189,10 +198,10 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
             Expanded(
                 child: hubAction(
                     s.tr('Send Money', 'টাকা পাঠান'),
-                    s.tr('Instant 0% Fee', 'তাত্ক্ষণিক ০% ফি'),
+                    s.tr('Send to another member', 'অন্য মেম্বারকে টাকা পাঠান'),
                     Icons.send,
                     p.primary,
-                    () => next(1))),
+                    () => showSendMoney(context, s))),
             hgap(10),
             Expanded(
                 child: hubAction(

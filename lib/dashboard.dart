@@ -1,3 +1,4 @@
+import 'send_money.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -215,7 +216,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                           onTap: () {
                                             switch (i) {
                                               case 0:
-                                                s.navigate(AppNavTab.PAYMENTS);
+                                                showSendMoney(context, s);
                                               case 1:
                                               case 7:
                                                 showStatement(context, s);
