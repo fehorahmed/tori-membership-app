@@ -363,3 +363,16 @@ Widget disabledFeature(Widget child) => Tooltip(
           enabled: false,
           child: Opacity(opacity: .4, child: AbsorbPointer(child: child))),
     );
+
+String? transactionAmountError(
+    String raw, dynamic minimum, dynamic maximum, bool bengali) {
+  final amount = double.tryParse(raw.trim());
+  final min = double.tryParse('$minimum') ?? 1;
+  final max = double.tryParse('$maximum') ?? 10000000;
+  if (amount == null || !amount.isFinite || amount < min || amount > max) {
+    return bengali
+        ? 'পরিমাণ ৳ ${min.toStringAsFixed(2)} থেকে ৳ ${max.toStringAsFixed(2)} এর মধ্যে হতে হবে।'
+        : 'Amount must be between Tk ${min.toStringAsFixed(2)} and Tk ${max.toStringAsFixed(2)}.';
+  }
+  return null;
+}

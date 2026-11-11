@@ -114,6 +114,13 @@ class _CashoutPageState extends State<CashoutPage> {
 
   Future<void> review() async {
     if (busy || code == null) return;
+    final amountError = transactionAmountError(amount.text,
+        data?['minimum_amount'], data?['maximum_amount'], s.bengali);
+    if (amountError != null) {
+      setState(() => error = amountError);
+      return;
+    }
+
     setState(() {
       busy = true;
       error = null;
@@ -274,8 +281,9 @@ class _CashoutPageState extends State<CashoutPage> {
               color: p.error),
         if (data!['enabled'] == true && uncertain == null && quote == null) ...[
           text(
-              s.tr('Maximum per transaction: Tk ${data!['maximum_amount']}',
-                  'প্রতি লেনদেনে সর্বোচ্চ: ৳ ${data!['maximum_amount']}'),
+              s.tr(
+                  'Per transaction: Tk ${data!['minimum_amount'] ?? '1.00'} – ${data!['maximum_amount']}',
+                  'প্রতি লেনদেনে: ৳ ${data!['minimum_amount'] ?? '1.00'} – ${data!['maximum_amount']}'),
               color: p.muted),
           secondary(
               code == null

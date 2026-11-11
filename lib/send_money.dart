@@ -80,6 +80,13 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
 
   Future<void> review() async {
     if (busy || pending != null) return;
+    final amountError = transactionAmountError(amount.text,
+        data?['minimum_amount'], data?['maximum_amount'], s.bengali);
+    if (amountError != null) {
+      setState(() => error = amountError);
+      return;
+    }
+
     setState(() {
       busy = true;
       error = null;
@@ -196,6 +203,11 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
                   'আগের ট্রান্সফারের ফলাফল নিশ্চিত করতে রিফ্রেশ করুন অথবা একই অনুরোধ আবার চেষ্টা করুন।'),
               color: p.error),
         if (reviewed == null && data!['enabled'] == true) ...[
+          text(
+              s.tr(
+                  'Per transaction: Tk ${data!['minimum_amount'] ?? '1.00'} – ${data!['maximum_amount'] ?? '10000000.00'}',
+                  'প্রতি লেনদেনে: ৳ ${data!['minimum_amount'] ?? '1.00'} – ${data!['maximum_amount'] ?? '10000000.00'}'),
+              color: p.muted),
           field(
               s.tr('Recipient mobile number or Member ID',
                   'প্রাপকের মোবাইল নম্বর অথবা মেম্বার আইডি'),

@@ -47,9 +47,10 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    var sends = 0;
+    var sends = 0, quotes = 0;
     final service = SendMoneyService(client: MockClient((r) async {
-      if (r.url.path.endsWith('/quote'))
+      if (r.url.path.endsWith('/quote')) {
+        quotes++;
         return http.Response(
             jsonEncode({
               'success': true,
@@ -63,6 +64,7 @@ void main() {
               }
             }),
             200);
+      }
       if (r.method == 'POST') {
         sends++;
         return http.Response(
@@ -74,6 +76,8 @@ void main() {
             'data': {
               'customer_id': 1,
               'enabled': true,
+              'minimum_amount': '100.00',
+              'maximum_amount': '5000.00',
               'available_balance': sends == 0 ? '1000.00' : '899.00',
               'transfers': []
             }
@@ -86,6 +90,12 @@ void main() {
             body: SendMoneyPage(state: ToriState(), service: service))));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).first, '01712345678');
+    await tester.enterText(find.byType(TextField).last, '99.99');
+    await tester.tap(find.text('Review transfer'));
+    await tester.pumpAndSettle();
+    expect(quotes, 0);
+    expect(find.textContaining('Amount must be between Tk 100.00'),
+        findsOneWidget);
     await tester.enterText(find.byType(TextField).last, '100');
     await tester.tap(find.text('Review transfer'));
     await tester.pumpAndSettle();

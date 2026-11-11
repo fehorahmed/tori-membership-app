@@ -5,11 +5,25 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tori_mfi_bank/cashout.dart';
+import 'package:tori_mfi_bank/ui.dart';
 import 'package:tori_mfi_bank/services/auth_service.dart';
 import 'package:tori_mfi_bank/services/cashout_service.dart';
 import 'package:tori_mfi_bank/state.dart';
 
 void main() {
+  test('Configured range includes both boundaries and rejects below minimum',
+      () {
+    expect(
+        transactionAmountError('99.99', '100.00', '5000.00', false), isNotNull);
+    expect(
+        transactionAmountError('100.00', '100.00', '5000.00', false), isNull);
+    expect(
+        transactionAmountError('5000.00', '100.00', '5000.00', false), isNull);
+    expect(transactionAmountError('5000.01', '100.00', '5000.00', true),
+        contains('পরিমাণ'));
+    expect(transactionAmountError('0.50', '0.50', '10.00', false), isNull);
+  });
+
   setUp(() => SharedPreferences.setMockInitialValues(
       {ApiConfig.tokenKey: 'test-member-token'}));
 
