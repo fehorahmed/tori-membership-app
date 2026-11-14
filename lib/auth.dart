@@ -2,10 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'services/auth_service.dart';
+import 'registration.dart';
 import 'state.dart';
 import 'ui.dart';
 
-enum AuthStep { mobile, registration, forgot, otp, pin }
+enum AuthStep { mobile, forgot, otp, pin }
 
 class WelcomeScreen extends StatefulWidget {
   final ToriState state;
@@ -20,10 +21,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       pin = TextEditingController(),
       confirmPin = TextEditingController(),
       otp = TextEditingController();
-  final name = TextEditingController(),
-      signupMobile = TextEditingController(),
-      email = TextEditingController(),
-      signupPin = TextEditingController();
   final otpFocus = FocusNode();
   bool consent = true, visible = false, busy = false, success = false;
   String? error;
@@ -37,16 +34,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   @override
   void dispose() {
     timer?.cancel();
-    for (final c in [
-      mobile,
-      pin,
-      confirmPin,
-      otp,
-      name,
-      signupMobile,
-      email,
-      signupPin
-    ]) {
+    for (final c in [mobile, pin, confirmPin, otp]) {
       c.dispose();
     }
     otpFocus.dispose();
@@ -289,8 +277,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                             key: ValueKey(step),
                                             child: switch (step) {
                                               AuthStep.mobile => mobileCard(),
-                                              AuthStep.registration =>
-                                                registrationCard(),
                                               AuthStep.forgot => forgotCard(),
                                               AuthStep.otp => otpCard(),
                                               AuthStep.pin => pinCard()
@@ -422,7 +408,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           text(tr("Don't have an account? ", 'অ্যাকাউন্ট নেই? '),
               size: 13.5, color: p.muted),
-          link(tr('Register Now', 'নিবন্ধন করুন'), null, size: 13.5)
+          link(
+              tr('Register Now', 'নিবন্ধন করুন'),
+              () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => RegistrationScreen(state: s))),
+              size: 13.5)
         ]),
         gap(10),
         link(tr('Need Help? Contact Support', 'সাহায্য প্রয়োজন? যোগাযোগ করুন'),
@@ -589,8 +579,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 color: p.muted))
       ]));
   Widget otpCard() {
-    final phone = (signupMobile.text.isEmpty ? mobile.text : signupMobile.text)
-        .replaceAll(' ', '');
+    final phone = mobile.text.replaceAll(' ', '');
     final masked = phone.length >= 10
         ? '+880 ${phone.substring(0, 4)} •••• ${phone.substring(phone.length - 3)}'
         : '+880 $phone';
@@ -705,56 +694,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         shadow: true);
   }
 
-  Widget registrationCard() => card(stack([
-        text(tr('Customer Registration', 'নতুন গ্রাহক নিবন্ধন'),
-            size: 18, color: p.ink),
-        field(
-            tr('Full Name (as on NID)',
-                'পূর্ণ নাম (জাতীয় পরিচয়পত্র অনুযায়ী)'),
-            name,
-            p,
-            hint: 'e.g. Tanvir Ahmed',
-            onChanged: (_) => setState(() {})),
-        field(tr('Mobile Number', 'মোবাইল নম্বর'), signupMobile, p,
-            hint: '01755892401',
-            keyboard: TextInputType.phone,
-            onChanged: (_) => setState(() {})),
-        field(tr('Email Address (Optional)', 'ইমেইল ঠিকানা (ঐচ্ছিক)'), email, p,
-            hint: 'tanvir@gmail.com'),
-        field(
-            tr('6-Digit Security PIN', '৬-ডিজিটের সিকিউরিটি পিন'), signupPin, p,
-            hint: '••••••',
-            keyboard: TextInputType.number,
-            maxLength: 6,
-            onChanged: (_) => setState(() {})),
-        Row(children: [
-          Checkbox(
-              value: consent,
-              onChanged: (v) => setState(() => consent = v ?? false)),
-          Expanded(
-              child: text(
-                  tr('I agree to Terms & Regulatory consents.',
-                      'আমি বাংলাদেশ ব্যাংকের শর্তাবলী ও নীতিমালায় সম্মত।'),
-                  size: 12,
-                  color: p.muted))
-        ]),
-        primary(
-            tr('Continue with OTP Verification', 'ওটিপি যাচাই ও নিবন্ধন করুন'),
-            consent &&
-                    name.text.isNotEmpty &&
-                    signupMobile.text.isNotEmpty &&
-                    signupPin.text.length == 6
-                ? () => go(AuthStep.otp)
-                : null),
-        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Flexible(
-              child: text(
-                  tr('Already have an account? ', 'ইতিমধ্যে অ্যাকাউন্ট আছে? '),
-                  size: 12,
-                  color: p.muted)),
-          link(tr('Sign In', 'লগইন করুন'), () => go(AuthStep.mobile))
-        ])
-      ]));
   Widget forgotCard() => card(stack([
         text(tr('Forgot Security PIN?', 'সিকিউরিটি পিন ভুলে গেছেন?'),
             size: 18, color: p.ink),

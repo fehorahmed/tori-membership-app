@@ -207,10 +207,7 @@ class ToriState extends ChangeNotifier {
 
       // Update Real Savings Balance
       if (summary != null) {
-        balance = ((summary['available_savings_balance'] ??
-                    summary['savings_balance']) as num?)
-                ?.toDouble() ??
-            balance;
+        balance = (summary['savings_balance'] as num?)?.toDouble() ?? balance;
         _syncBalance();
       }
 
