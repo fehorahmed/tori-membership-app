@@ -79,6 +79,13 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('TB Test Branch').last);
     await tester.pumpAndSettle();
+    await tester
+        .ensureVisible(find.byKey(const Key('registration-referral-type')));
+    await tester.tap(find.byKey(const Key('registration-referral-type')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Agent').last);
+    await tester.pumpAndSettle();
+    await enter('registration-referral', '10100001');
     await enter('registration-password', 'website-pass-42');
     await enter('registration-password-confirmation', 'website-pass-42');
     await tester.ensureVisible(find.byKey(const Key('registration-consent')));
@@ -90,6 +97,8 @@ void main() {
         posts.entries.firstWhere((e) => e.key.endsWith('/initiate')).value;
     expect(initiated['mobile_no'], '01712345678');
     expect(initiated['password'], 'website-pass-42');
+    expect(initiated['referral_type'], 'agent');
+    expect(initiated['referral_code'], '10100001');
     expect(initiated.containsKey('pin'), false);
     expect(state.loggedIn, false);
     await enter('registration-otp', '123456');

@@ -27,6 +27,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       pinConfirmation = TextEditingController();
   List<Map<String, dynamic>> branches = [];
   int? branch;
+  String referralType = 'member';
   int step = 0, countdown = 0;
   bool consent = false, busy = false, loading = true, showPassword = false;
   String? error, registrationToken, verificationToken;
@@ -142,6 +143,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           'terms_accepted': consent,
           'referral_code':
               referral.text.trim().isEmpty ? null : referral.text.trim(),
+          'referral_type': referral.text.trim().isEmpty ? null : referralType,
         });
       } else if (step == 1) {
         result = await send('verify-otp', {'otp': otp.text});
@@ -320,10 +322,40 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                         'শাখা নির্বাচন করুন।')
                                     : null,
                               )),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: DropdownButtonFormField<String>(
+                            key: const Key('registration-referral-type'),
+                            initialValue: referralType,
+                            decoration: InputDecoration(
+                              labelText: tr('Referred by', 'রেফার করেছেন'),
+                            ),
+                            items: [
+                              DropdownMenuItem(
+                                  value: 'member',
+                                  child: Text(tr('Member', 'মেম্বার'))),
+                              DropdownMenuItem(
+                                  value: 'agent',
+                                  child: Text(tr('Agent', 'এজেন্ট'))),
+                            ],
+                            onChanged: busy
+                                ? null
+                                : (value) {
+                                    if (value != null)
+                                      setState(() {
+                                        referralType = value;
+                                        error = null;
+                                      });
+                                  },
+                          ),
+                        ),
                         input(
                             'registration-referral',
-                            tr('Referral / Agent Code (Optional)',
-                                'রেফারেল / এজেন্ট কোড (ঐচ্ছিক)'),
+                            referralType == 'member'
+                                ? tr('Member Code (Optional)',
+                                    'মেম্বার কোড (ঐচ্ছিক)')
+                                : tr('Agent Username / Code (Optional)',
+                                    'এজেন্ট ইউজারনেম / কোড (ঐচ্ছিক)'),
                             referral),
                         input(
                             'registration-password',
