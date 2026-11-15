@@ -99,60 +99,36 @@ class _HomeScreenState extends State<HomeScreen> {
                                                       () => revealed = false);
                                               });
                                           },
-                                          child: AnimatedContainer(
-                                              duration: const Duration(
-                                                  milliseconds: 300),
-                                              curve: Curves.easeInOut,
+                                          child: Container(
+                                              width: 160,
                                               height: 28,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 10),
+                                              padding: const EdgeInsets.symmetric(horizontal: 10),
                                               decoration: BoxDecoration(
                                                   color: p.surface,
-                                                  border: Border.all(
-                                                      color: p.border),
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                          100)),
+                                                  border: Border.all(color: p.border),
+                                                  borderRadius: BorderRadius.circular(100)),
                                               child: Row(children: [
                                                 CircleAvatar(
                                                     radius: 9,
-                                                    backgroundColor:
-                                                        const Color(0xFFE11D48),
-                                                    child: text('৳',
-                                                        size: 11,
-                                                        color: Colors.white)),
+                                                    backgroundColor: const Color(0xFFE11D48),
+                                                    child: text('৳', size: 11, color: Colors.white)),
                                                 hgap(6),
-                                                AnimatedSwitcher(
-                                                    duration: const Duration(
-                                                        milliseconds: 300),
-                                                    transitionBuilder:
-                                                        (child, animation) {
-                                                      return SlideTransition(
-                                                        position: Tween<Offset>(
-                                                          begin: const Offset(
-                                                              0.3, 0),
-                                                          end: Offset.zero,
-                                                        ).animate(animation),
-                                                        child: FadeTransition(
-                                                            opacity: animation,
-                                                            child: child),
-                                                      );
-                                                    },
-                                                    child: KeyedSubtree(
-                                                        key: ValueKey<bool>(
-                                                            revealed),
+                                                Expanded(
+                                                  child: AnimatedSwitcher(
+                                                    duration: const Duration(milliseconds: 300),
+                                                    child: SizedBox(
+                                                      key: ValueKey<bool>(revealed),
+                                                      width: double.infinity,
+                                                      child: FittedBox(
+                                                        fit: BoxFit.scaleDown,
+                                                        alignment: Alignment.centerLeft,
                                                         child: text(
-                                                            revealed
-                                                                ? s.money(
-                                                                    s.balance)
-                                                                : s.tr(
-                                                                    'Tap for Balance',
-                                                                    'ব্যালেন্স দেখুন'),
-                                                            size: 12,
-                                                            color: p.ink,
-                                                            weight: FontWeight
-                                                                .w600)))
+                                                          revealed ? s.money(s.balance) : s.tr('Tap for Balance', 'ব্যালেন্স দেখুন'),
+                                                          size: 12, color: p.ink, weight: FontWeight.w600),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
                                               ])))
                                     ]),
                                 hgap(14),

@@ -109,6 +109,7 @@ class ToriState extends ChangeNotifier {
   int _memberEpoch = 0;
 
   void logout() {
+    profile = profile.copyWith(rewardPoints: 0);
     referredBy = null;
     _memberEpoch++;
     dashboardLoading = false;
@@ -129,6 +130,7 @@ class ToriState extends ChangeNotifier {
     _memberEpoch++;
     transactions = [];
     profile = profile.copyWith(
+        rewardPoints: 0,
         fullName: '',
         mobileNumber: '',
         email: '',
@@ -215,6 +217,9 @@ class ToriState extends ChangeNotifier {
           mfiId: cust['member_no'] ?? profile.mfiId,
         );
       }
+
+      profile = profile.copyWith(
+          rewardPoints: (summary?['referral_points'] as num?)?.toInt() ?? 0);
 
       // Update Real Savings Balance
       if (summary != null) {

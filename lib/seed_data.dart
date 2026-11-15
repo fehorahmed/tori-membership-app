@@ -400,7 +400,7 @@ UserProfile initialProfile() => UserProfile(
     mfiBranch: "Banani MFI Branch #04",
     relationship: "Primary Account Holder",
     kycStatus: "Verified",
-    rewardPoints: 1250);
+    rewardPoints: 0);
 
 KycDetails initialKyc() => KycDetails(
     status: "Verified",

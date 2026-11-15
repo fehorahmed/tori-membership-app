@@ -19,6 +19,7 @@ void main() {
         utf8.encode(jsonEncode({
           'success': true,
           'data': {
+            'summary': {'referral_points': 42},
             'recent_transactions': [
               {
                 'id': 'transfer-1',
@@ -46,10 +47,12 @@ void main() {
     });
     final state = ToriState();
     expect(state.transactions, isEmpty);
+    expect(state.profile.rewardPoints, 0);
     final response = await DashboardService.fetchDashboardData();
     expect(response['success'], true, reason: response.toString());
     await state.loadDashboardData();
     expect(state.transactions, hasLength(1));
+    expect(state.profile.rewardPoints, 42);
     final row = state.transactions.single;
     expect(row.txnId, 'SM-1');
     expect(row.amount, 1010);
@@ -59,6 +62,7 @@ void main() {
     expect(row.copyWith().fee, 10);
     state.logout();
     expect(state.transactions, isEmpty);
+    expect(state.profile.rewardPoints, 0);
   });
   test('Failed dashboard never inserts demo history', () async {
     final old = DashboardService.client;
