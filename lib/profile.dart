@@ -8,6 +8,7 @@ import 'dialogs.dart';
 import 'legal_copy.dart';
 import 'member_card.dart';
 import 'profile_setup.dart';
+import 'referrals.dart';
 
 class ProfileScreen extends StatelessWidget {
   final ToriState state;
@@ -46,6 +47,10 @@ class ProfileScreen extends StatelessWidget {
                           Icons.groups_outlined,
                           p,
                           null)
+                    ]),
+                    group(s.tr('REFERRALS', 'রেফারেল'), p, [
+                      profileRow(s.tr('Referral Points', 'রেফারেল পয়েন্ট'),
+                          Icons.redeem, p, () => showReferrals(context, s))
                     ]),
                     group(s.tr('MY CARD', 'ডিজিটাল কার্ড'), p, [
                       profileRow(s.tr('My Card', 'আমার ডিজিটাল কার্ড'),
@@ -598,19 +603,22 @@ Widget profileHero(BuildContext context, ToriState s, Palette p) => ClipRRect(
                   ]),
                   Row(children: [
                     Flexible(
-                        child: text('MFI Id: ${s.profile.mfiId}',
+                        child: text('${s.tr('Your Referral ID', 'আপনার রেফারেল আইডি')}: ${s.profile.mfiId.isEmpty ? s.tr('Not assigned', 'দেওয়া হয়নি') : s.profile.mfiId}',
                             size: 12, color: p.muted, family: 'monospace')),
                     IconButton(
-                        onPressed: () {
+                        tooltip: s.tr('Copy referral ID', 'রেফারেল আইডি কপি করুন'),
+                        onPressed: s.profile.mfiId.isEmpty ? null : () {
                           Clipboard.setData(
                               ClipboardData(text: s.profile.mfiId));
-                          toast(context, 'MFI ID copied to clipboard');
+                          toast(context, s.tr('Referral ID copied.', 'রেফারেল আইডি কপি হয়েছে।'));
                         },
                         constraints:
                             const BoxConstraints(minWidth: 24, minHeight: 24),
                         padding: EdgeInsets.zero,
                         icon: Icon(Icons.copy, size: 14, color: p.primary))
-                  ])
+                  ]),
+                  if (s.referredBy != null)
+                    text('${s.tr('Referred by', 'রেফার করেছেন')}: ${s.referrerDescription}', size: 12, color: p.muted)
                 ], spacing: 4))
               ]))
         ]),

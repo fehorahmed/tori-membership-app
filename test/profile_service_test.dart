@@ -17,6 +17,27 @@ void main() {
   setUp(() => SharedPreferences.setMockInitialValues(
       {ApiConfig.tokenKey: 'test-token'}));
 
+  testWidgets('My profile distinguishes own referral ID from the referring agent', (tester) async {
+    final state = ToriState();
+    final service = ProfileService(client: MockClient((_) async => http.Response(jsonEncode({
+      'success': true,
+      'data': {
+        'name': 'New Member', 'member_no': '10100042',
+        'referred_by': {'type': 'agent', 'name': 'Referring Agent', 'code': '10100001'},
+        'kyc': {'status': 'Not submitted'}
+      }
+    }), 200)));
+    addTearDown(service.close);
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: ProfileDetailsPage(state: state, service: service))));
+    await tester.pumpAndSettle();
+    expect(find.text('Your Referral ID'), findsOneWidget);
+    expect(find.text('10100042'), findsOneWidget);
+    expect(find.text('Referring Agent (Agent) · 10100001'), findsOneWidget);
+    state.applyMemberProfile({'name': 'No referral member'});
+    expect(state.referredBy, isNull);
+    expect(state.referrerDescription, 'No referral recorded');
+  });
+
   test('Profile update sends member token, language and editable fields only',
       () async {
     final client = MockClient((request) async {

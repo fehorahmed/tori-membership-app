@@ -19,6 +19,14 @@ class ToriState extends ChangeNotifier {
       'Live MFI Loan payment endpoint not provisioned (Source of Truth enforcement).',
       'লোন কিস্তি পেমেন্ট সার্ভার এন্ডপয়েন্ট কনফিগার করা হয়নি (সততা নীতি লঙ্ঘন প্রতিরোধ)।');
   double balance = 160450;
+  Map<String, dynamic>? referredBy;
+  String get referrerDescription {
+    final referral = referredBy;
+    if (referral == null) return tr('No referral recorded', 'রেফারেন্সের তথ্য নেই');
+    final type = referral['type'] == 'member' ? tr('Member', 'মেম্বার') : tr('Agent', 'এজেন্ট');
+    final name = referral['name'] ?? tr('Record unavailable', 'তথ্য পাওয়া যায়নি');
+    return '$name ($type) · ${referral['code']}';
+  }
   List<AccountItem> accounts = initialAccounts();
   List<TransactionItem> transactions = [];
   List<FavoriteContact> favorites = initialFavorites();
@@ -101,6 +109,7 @@ class ToriState extends ChangeNotifier {
   int _memberEpoch = 0;
 
   void logout() {
+    referredBy = null;
     _memberEpoch++;
     dashboardLoading = false;
     dashboardError = null;
@@ -116,6 +125,7 @@ class ToriState extends ChangeNotifier {
       ? value.length >= 4 && value.length <= 6
       : value == securityPin;
   void login() {
+    referredBy = null;
     _memberEpoch++;
     transactions = [];
     profile = profile.copyWith(
@@ -142,6 +152,7 @@ class ToriState extends ChangeNotifier {
   }
 
   void applyMemberProfile(Map<String, dynamic> data) {
+    referredBy = data['referred_by'] is Map ? Map<String, dynamic>.from(data['referred_by']) : null;
     final details = data['kyc'] as Map<String, dynamic>? ?? {};
     final documents = details['documents'] is Map
         ? Map<String, dynamic>.from(details['documents'])
