@@ -375,7 +375,7 @@ class UserProfile {
   final String mfiBranch;
   final String relationship;
   final String kycStatus;
-  final int rewardPoints;
+  final num rewardPoints;
   const UserProfile({
     required this.fullName,
     required this.memberType,
@@ -402,7 +402,7 @@ class UserProfile {
     String? mfiBranch,
     String? relationship,
     String? kycStatus,
-    int? rewardPoints,
+    num? rewardPoints,
   }) =>
       UserProfile(
         fullName: fullName ?? this.fullName,

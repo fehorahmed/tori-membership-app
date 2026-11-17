@@ -13,7 +13,8 @@ void main() {
         tester.widgetList<ServiceTile>(find.byType(ServiceTile)).toList();
     expect(tiles.first.enabled, true);
     expect(tiles[1].enabled, true);
-    expect(tiles[2].enabled, false);
+    expect(tiles[1].label, 'Branch Cash-out');
+    expect(tiles[2].enabled, true);
     expect(tiles[3].enabled, false);
   });
   testWidgets(

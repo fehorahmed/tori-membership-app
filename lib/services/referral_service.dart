@@ -10,6 +10,9 @@ class ReferralService extends SendMoneyService {
   Future<Map<String, dynamic>> load(String language) =>
       send('referrals', language);
 
+  Future<Map<String, dynamic>> history(String language, int page, {String period = 'all'}) =>
+      send('referrals/history?page=$page&period=$period', language);
+
   @override
   Future<Map<String, dynamic>?> pending(int customer) async {
     final prefs = await SharedPreferences.getInstance();

@@ -14,6 +14,95 @@ void main() {
   setUp(() => SharedPreferences.setMockInitialValues(
       {ApiConfig.tokenKey: 'test-token'}));
 
+  testWidgets('Point history shows signed entries and loads older transactions', (tester) async {
+    tester.view.physicalSize = const Size(320, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    var historyRequests = 0;
+    Map<String, dynamic> entry(String id, String type, String direction, String points) => {
+      'id': id, 'type': type, 'direction': direction, 'points': points,
+      'amount': '21.00', 'point_value': '30.00', 'order_no': type == 'referral' ? null : 'ESO-HISTORY',
+      'created_at': '2026-11-17T06:00:00+00:00', 'reference': null,
+    };
+    final service = ReferralService(client: MockClient((r) async {
+      if (r.url.path.endsWith('/history')) {
+        historyRequests++;
+        if (r.url.queryParameters['period'] == 'today') {
+          expect(r.url.queryParameters['page'], '1');
+          return http.Response(jsonEncode({'success': true, 'data': {
+            'current_page': 1, 'last_page': 1, 'data': []
+          }}), 200);
+        }
+        expect(r.url.queryParameters['period'], 'all');
+        expect(r.url.queryParameters['page'], '2');
+        return http.Response(jsonEncode({'success': true, 'data': {
+          'current_page': 2, 'last_page': 2, 'data': [entry('redemption-1', 'redemption', 'debit', '1.000000')]
+        }}), 200);
+      }
+      return http.Response(jsonEncode({'success': true, 'data': {
+        'customer_id': 9, 'enabled': true, 'points': 73.233333, 'point_value': '30.00',
+        'redeemable_amount': '2196.99', 'referral_count': 1, 'rewarded_count': 1,
+        'redemptions': [], 'history': {'current_page': 1, 'last_page': 2, 'data': [
+          entry('reward-1', 'referral', 'credit', '2.000000'),
+          entry('purchase-1', 'purchase', 'debit', '0.700000'),
+          entry('refund-1', 'refund', 'credit', '0.700000'),
+        ]}
+      }}), 200);
+    }));
+    addTearDown(service.close);
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: ReferralPointsPage(state: ToriState(), service: service))));
+    await tester.pumpAndSettle();
+    expect(find.text('Point history'), findsOneWidget);
+    expect(find.text('Referral points earned'), findsOneWidget);
+    expect(find.text('Shopping payment'), findsOneWidget);
+    expect(find.text('Order refund'), findsOneWidget);
+    expect(find.text('+2'), findsOneWidget);
+    expect(find.text('-0.7'), findsOneWidget);
+    expect(find.text('+0.7'), findsOneWidget);
+    await tester.ensureVisible(find.text('Load more'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Load more'));
+    await tester.pumpAndSettle();
+    expect(historyRequests, 1);
+    expect(find.text('Redeemed to savings'), findsOneWidget);
+    expect(find.text('-1'), findsOneWidget);
+    expect(find.text('Load more'), findsNothing);
+    await tester.ensureVisible(find.text('Today'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Today'));
+    await tester.pumpAndSettle();
+    expect(historyRequests, 2);
+    expect(find.text('No point transactions yet.'), findsOneWidget);
+    expect(find.text('Shopping payment'), findsNothing);
+    expect(tester.widget<ChoiceChip>(find.ancestor(of: find.text('Today'), matching: find.byType(ChoiceChip))).selected, true);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Fractional shopping point balance and milestone progress render safely', (tester) async {
+    tester.view.physicalSize = const Size(500, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final service = ReferralService(client: MockClient((_) async => http.Response(jsonEncode({
+      'success': true,
+      'data': {
+        'customer_id': 9, 'enabled': true, 'points': 73.233333,
+        'point_value': '30.00', 'redeemable_amount': '369.99',
+        'referral_count': 1, 'rewarded_count': 1, 'redemptions': [],
+        'milestones': {'enabled': true, 'tiers': [
+          {'id': 'tier-1', 'threshold': 100, 'percentage': '25.00', 'enabled': true}
+        ], 'bonuses': []}
+      }
+    }), 200)));
+    addTearDown(service.close);
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: ReferralPointsPage(state: ToriState(), service: service))));
+    await tester.pumpAndSettle();
+    expect(find.text('Available points: 73.233333'), findsOneWidget);
+    expect(find.text('Progress: 73.233333/100'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   test(
       'Uncertain redemption reuses identical points, rate and key without persisting PIN',
       () async {
@@ -50,7 +139,7 @@ void main() {
     expect(await service.pending(9), isNull);
   });
 
-  testWidgets('Member reviews points and confirms before savings redemption',
+  testWidgets('Savings redemption form is hidden while points and milestones remain visible',
       (tester) async {
     tester.view.physicalSize = const Size(500, 1200);
     tester.view.devicePixelRatio = 1;
@@ -98,24 +187,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Available points: 2'), findsOneWidget);
     expect(find.text('Progress: 2/100'), findsOneWidget);
-    await tester.enterText(find.byType(TextField).at(0), '1');
-    await tester.enterText(find.byType(TextField).at(1), '763921');
-    await tester.tap(find.text('Redeem to savings'));
-    await tester.pumpAndSettle();
+    expect(find.byType(TextField), findsNothing);
+    expect(find.text('Redeem to savings'), findsNothing);
+    expect(find.text('Transaction PIN'), findsNothing);
+    expect(find.text('No point transactions yet.'), findsOneWidget);
     expect(posts, 0);
-    expect(find.text('Redeem 1 points for Tk 30.00 into your savings account?'),
-        findsOneWidget);
-    await tester.tap(find.text('Cancel'));
-    await tester.pumpAndSettle();
-    expect(posts, 0);
-    await tester.tap(find.text('Redeem to savings'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Confirm'));
-    await tester.pumpAndSettle();
-    expect(posts, 1);
-    expect(find.text('Tk 30.00 credited to savings.'), findsOneWidget);
-    expect(find.text('Available points: 1'), findsOneWidget);
-    expect(find.text('Progress: 1/100'), findsOneWidget);
   });
   testWidgets(
       'Milestone check posts only a collection request and shows cash paid',

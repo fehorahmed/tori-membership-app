@@ -25,8 +25,8 @@ class ProfileScreen extends StatelessWidget {
                 roundIcon(Icons.arrow_back, p,
                     onTap: () => s.navigate(AppNavTab.HOME)),
                 hgap(12),
-                text(s.tr('My Profile', 'আমার প্রোফাইল'),
-                    size: 20, color: p.ink, family: 'PlusJakartaSans')
+                Expanded(child: text(s.tr('My Profile', 'আমার প্রোফাইল'),
+                    size: 20, color: p.ink, family: 'PlusJakartaSans'))
               ])),
           Expanded(
               child: SingleChildScrollView(

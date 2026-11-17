@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'state.dart';
 import 'dialogs.dart';
 import 'services/referral_service.dart';
@@ -22,10 +23,16 @@ class ReferralPointsPage extends StatefulWidget {
 }
 
 class _ReferralPointsPageState extends State<ReferralPointsPage> {
+  static const bool _showRedemption = false;
   late final service = widget.service ?? ReferralService();
   final points = TextEditingController(), pin = TextEditingController();
   Map<String, dynamic>? data, pending;
   String? message;
+  List<Map<String, dynamic>> history = [];
+  int historyPage = 1, historyLastPage = 1, historyGeneration = 0;
+  bool historyLoading = false;
+  String? historyError;
+  String historyPeriod = 'all';
   bool loading = true, busy = false;
   ToriState get s => widget.state;
   String get lang => s.bengali ? 'bn' : 'en';
@@ -45,8 +52,9 @@ class _ReferralPointsPageState extends State<ReferralPointsPage> {
   }
 
   Future<void> load() async {
+    final generation = ++historyGeneration;
     final result = await service.load(lang);
-    if (!mounted) return;
+    if (!mounted || generation != historyGeneration) return;
     if (result['success'] == true) {
       final next = Map<String, dynamic>.from(result['data']);
       var saved = await service.pending(next['customer_id']);
@@ -59,9 +67,17 @@ class _ReferralPointsPageState extends State<ReferralPointsPage> {
       if (!mounted) return;
       setState(() {
         data = next;
+        final page = next['history'] as Map?;
+        history = List<Map<String, dynamic>>.from(
+            ((page?['data'] ?? []) as List).map((row) => Map<String, dynamic>.from(row)));
+        historyPage = (page?['current_page'] as num?)?.toInt() ?? 1;
+        historyLastPage = (page?['last_page'] as num?)?.toInt() ?? 1;
+        historyLoading = false;
+        historyError = null;
         pending = saved;
         loading = false;
       });
+      if (historyPeriod != 'all') await filterHistory(historyPeriod);
     } else {
       setState(() {
         message = result['message'];
@@ -159,7 +175,7 @@ class _ReferralPointsPageState extends State<ReferralPointsPage> {
               title: Text(
                   '${tier['threshold']} ${s.tr('points', 'পয়েন্ট')} · ${tier['percentage']}%'),
               subtitle: Text(
-                  '${s.tr('Progress', 'অগ্রগতি')}: ${(data!['points'] as int).clamp(0, tier['threshold'] as int)}/${tier['threshold']}')),
+                  '${s.tr('Progress', 'অগ্রগতি')}: ${(data!['points'] as num).clamp(0, tier['threshold'] as int)}/${tier['threshold']}')),
       for (final bonus in bonuses)
         ListTile(
             contentPadding: EdgeInsets.zero,
@@ -179,6 +195,114 @@ class _ReferralPointsPageState extends State<ReferralPointsPage> {
           child: Text(s.tr('Check / collect milestone bonus',
               'মাইলস্টোন বোনাস যাচাই / সংগ্রহ করুন'))),
     ]);
+  }
+
+  Future<void> filterHistory(String period) async {
+    final generation = ++historyGeneration;
+    setState(() {
+      historyPeriod = period;
+      historyLoading = true;
+      historyError = null;
+      history = [];
+      historyPage = historyLastPage = 1;
+    });
+    final result = await service.history(lang, 1, period: period);
+    if (!mounted || generation != historyGeneration) return;
+    setState(() {
+      historyLoading = false;
+      if (result['success'] == true) {
+        final page = Map<String, dynamic>.from(result['data']);
+        history = List<Map<String, dynamic>>.from((page['data'] as List).map((r) => Map<String, dynamic>.from(r)));
+        historyPage = (page['current_page'] as num).toInt();
+        historyLastPage = (page['last_page'] as num).toInt();
+      } else {
+        historyError = result['message']?.toString() ?? s.tr('Unable to load history.', 'ইতিহাস লোড করা যায়নি।');
+      }
+    });
+  }
+
+  Future<void> loadMoreHistory() async {
+    if (historyLoading || historyPage >= historyLastPage) return;
+    final generation = historyGeneration;
+    setState(() { historyLoading = true; historyError = null; });
+    final result = await service.history(lang, historyPage + 1, period: historyPeriod);
+    if (!mounted || generation != historyGeneration) return;
+    setState(() {
+      historyLoading = false;
+      if (result['success'] == true) {
+        final page = Map<String, dynamic>.from(result['data']);
+        final existing = history.map((row) => row['id']).toSet();
+        history.addAll(((page['data'] ?? []) as List)
+            .map((row) => Map<String, dynamic>.from(row))
+            .where((row) => !existing.contains(row['id'])));
+        historyPage = (page['current_page'] as num).toInt();
+        historyLastPage = (page['last_page'] as num).toInt();
+      } else {
+        historyError = result['message']?.toString() ?? s.tr('Unable to load history.', 'ইতিহাস লোড করা যায়নি।');
+      }
+    });
+  }
+
+  Widget pointHistory() {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const SizedBox(height: 24),
+      Text(s.tr('Point history', 'পয়েন্টের ইতিহাস'),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+      const SizedBox(height: 12),
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        for (final period in ['all', 'today', 'weekly', 'monthly'])
+          ChoiceChip(
+              label: Text(s.tr(
+                  {'all': 'All', 'today': 'Today', 'weekly': 'Weekly', 'monthly': 'Monthly'}[period]!,
+                  {'all': 'সব', 'today': 'আজ', 'weekly': 'এই সপ্তাহ', 'monthly': 'এই মাস'}[period]!)),
+              selected: historyPeriod == period,
+              onSelected: (_) => filterHistory(period)),
+      ]),
+      const SizedBox(height: 8),
+      if (historyLoading && history.isEmpty)
+        const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator())),
+      if (history.isEmpty && !historyLoading && historyError == null)
+        Padding(padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Text(s.tr('No point transactions yet.', 'এখনও কোনো পয়েন্ট লেনদেন নেই।'))),
+      for (final row in history) historyTile(row),
+      if (historyError != null) ...[
+        Text(historyError!, style: const TextStyle(color: Colors.red)),
+        if (history.isEmpty) TextButton(onPressed: () => filterHistory(historyPeriod), child: Text(s.tr('Retry', 'আবার চেষ্টা করুন'))),
+      ],
+      if (historyPage < historyLastPage)
+        TextButton(onPressed: historyLoading ? null : loadMoreHistory,
+            child: Text(historyLoading ? s.tr('Loading…', 'লোড হচ্ছে…') : s.tr('Load more', 'আরও দেখুন'))),
+    ]);
+  }
+
+  Widget historyTile(Map<String, dynamic> row) {
+    final credit = row['direction'] == 'credit';
+    final color = credit ? const Color(0xFF008E6D) : const Color(0xFFD64545);
+    final title = switch (row['type']) {
+      'referral' => s.tr('Referral points earned', 'রেফারেল পয়েন্ট পেয়েছেন'),
+      'purchase' => s.tr('Shopping payment', 'কেনাকাটার পেমেন্ট'),
+      'refund' => s.tr('Order refund', 'অর্ডারের পয়েন্ট ফেরত'),
+      _ => s.tr('Redeemed to savings', 'সঞ্চয়ে রিডিম'),
+    };
+    final value = num.tryParse('${row['points']}') ?? 0;
+    final date = DateTime.tryParse('${row['created_at']}');
+    final details = <String>[
+      if (row['order_no'] != null) '${row['order_no']}',
+      if (row['reference'] != null && '${row['reference']}'.isNotEmpty) '${row['reference']}',
+      if (row['amount'] != null) 'Tk ${row['amount']}',
+      if (row['point_value'] != null) '${s.tr('1 point', '১ পয়েন্ট')} = Tk ${row['point_value']}',
+      if (date != null) DateFormat('dd MMM yyyy, hh:mm a').format(date.toLocal()),
+    ];
+    return ListTile(
+      key: ValueKey(row['id']), contentPadding: const EdgeInsets.symmetric(vertical: 4),
+      leading: CircleAvatar(backgroundColor: color.withValues(alpha: 0.10),
+          child: Icon(credit ? Icons.add : Icons.remove, color: color)),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+      subtitle: Text(details.join(' · ')),
+      trailing: Text('${credit ? '+' : '-'}${NumberFormat('#,##0.######').format(value)}',
+          style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+      isThreeLine: details.length > 2,
+    );
   }
 
   @override
@@ -204,13 +328,14 @@ class _ReferralPointsPageState extends State<ReferralPointsPage> {
                 Text(
                     '${s.tr('1 point', '১ পয়েন্ট')} = Tk ${data!['point_value']}'),
                 Text(
-                    '${s.tr('Redeemable value', 'রিডিম মূল্য')}: Tk ${data!['redeemable_amount']}'),
+                    '${s.tr('Point value', 'পয়েন্টের মূল্য')}: Tk ${data!['redeemable_amount']}'),
                 Text(
                     '${s.tr('Referrals / Rewarded', 'রেফারেল / বোনাসপ্রাপ্ত')}: ${data!['referral_count']} / ${data!['rewarded_count']}'),
                 const SizedBox(height: 16),
                 Text(s.tr(
-                    'Points are earned after your referred member pays the full registration fee. Redeem manually at the current point value.',
-                    'আপনার রেফার করা মেম্বারের সম্পূর্ণ নিবন্ধন ফি কাটা হলে পয়েন্ট পাবেন। বর্তমান পয়েন্টের মূল্যে নিজে রিডিম করতে পারবেন।')),
+                    'Points are earned after your referred member pays the full registration fee. You can use points to shop on the ecommerce website.',
+                    'আপনার রেফার করা মেম্বারের সম্পূর্ণ নিবন্ধন ফি কাটা হলে পয়েন্ট পাবেন। পয়েন্ট দিয়ে ইকমার্স ওয়েবসাইটে কেনাকাটা করতে পারবেন।')),
+                if (_showRedemption) ...[
                 if (data!['enabled'] != true)
                   Text(s.tr('Redemption is currently unavailable.',
                       'রিডিম বর্তমানে বন্ধ আছে।')),
@@ -247,16 +372,10 @@ class _ReferralPointsPageState extends State<ReferralPointsPage> {
                             ? s.tr('Retry redemption', 'আবার চেষ্টা করুন')
                             : s.tr('Redeem to savings',
                                 'সঞ্চয় হিসাবে রিডিম করুন'))),
+                ],
                 const SizedBox(height: 24),
                 if (data!['milestones'] is Map) milestoneSection(),
-                Text(s.tr('Redemption history', 'রিডিমের ইতিহাস'),
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                for (final row in data!['redemptions'] as List)
-                  ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                          '${row['points']} ${s.tr('points', 'পয়েন্ট')} · Tk ${row['amount']}'),
-                      subtitle: Text('${row['created_at']}')),
+                pointHistory(),
               ] else
                 TextButton(
                     onPressed: busy ? null : load,

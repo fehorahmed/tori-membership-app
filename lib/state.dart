@@ -219,7 +219,7 @@ class ToriState extends ChangeNotifier {
       }
 
       profile = profile.copyWith(
-          rewardPoints: (summary?['referral_points'] as num?)?.toInt() ?? 0);
+          rewardPoints: (summary?['referral_points'] as num?) ?? 0);
 
       // Update Real Savings Balance
       if (summary != null) {

@@ -352,14 +352,14 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
   }
 
   Widget beneficiaries() => SizedBox(
-      height: 82,
+      height: 110,
       child: ListView(scrollDirection: Axis.horizontal, children: [
         SizedBox(
             width: 70,
             child: Column(children: [
               roundIcon(Icons.add, p, onTap: () => next(1), size: 48),
               gap(6),
-              text(s.tr('New Send', 'নতুন প্রাপক'), size: 10, color: p.muted)
+              text(s.tr('New Send', 'নতুন প্রাপক'), size: 10, color: p.muted, lines: 2)
             ])),
         for (final f in s.favorites)
           SizedBox(

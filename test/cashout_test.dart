@@ -64,7 +64,7 @@ void main() {
   testWidgets(
       'Member reviews the server charge before PIN confirmation and sees pending hold',
       (tester) async {
-    tester.view.physicalSize = const Size(360, 800);
+    tester.view.physicalSize = const Size(320, 800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);

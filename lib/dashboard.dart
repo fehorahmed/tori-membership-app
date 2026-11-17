@@ -1,4 +1,5 @@
 import 'send_money.dart';
+import 'cashout.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -144,13 +145,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                           color: Color(0xFFF59E0B), size: 16),
                                       hgap(4),
                                       text(
-                                          NumberFormat('#,##0')
+                                          NumberFormat('#,##0.######')
                                               .format(s.profile.rewardPoints),
                                           size: 12,
                                           color: p.ink)
                                     ])),
-                                hgap(),
-                                disabledFeature(roundIcon(Icons.search, p)),
                                 hgap(),
                                 roundIcon(
                                     s.dark ? Icons.light_mode : Icons.dark_mode,
@@ -166,10 +165,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 row++) ...[
                               if (row > 0) gap(16),
                               Row(children: [
-                                for (int i = row * 4; i < row * 4 + 4; i++)
+                                for (final i in const [0, 8, 1, 5, 6, 7].skip(row * 4).take(4))
                                   Expanded(
                                       child: ServiceTile(
-                                          enabled: i == 0 || i == 1 || i == 7,
+                                          enabled: i == 0 || i == 1 || i == 7 || i == 8,
                                           label: [
                                             s.tr('Send Money', 'সেন্ড মানি'),
                                             s.tr('Passbook', 'পাসবুক'),
@@ -178,7 +177,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                             s.tr('Loan', 'লোন'),
                                             s.tr('Add Money', 'অ্যাড মানি'),
                                             s.tr('Savings', 'সঞ্চয়'),
-                                            s.tr('Statement', 'স্টেটমেন্ট')
+                                            s.tr('Statement', 'স্টেটমেন্ট'),
+                                            s.tr('Branch Cash-out', 'ব্রাঞ্চ ক্যাশ আউট')
                                           ][i],
                                           icon: const [
                                             Icons.send,
@@ -188,7 +188,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                             Icons.request_quote,
                                             Icons.add_card,
                                             Icons.account_balance_wallet,
-                                            Icons.list_alt
+                                            Icons.list_alt,
+                                            Icons.storefront
                                           ][i],
                                           color: const [
                                             Color(0xFFE11D48),
@@ -198,11 +199,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                             Color(0xFF2563EB),
                                             Color(0xFF0891B2),
                                             Color(0xFF4F46E5),
-                                            Color(0xFF64748B)
+                                            Color(0xFF64748B),
+                                            Color(0xFFD97706)
                                           ][i],
                                           p: p,
                                           onTap: () {
                                             switch (i) {
+                                              case 8:
+                                                showCashout(context, s);
                                               case 0:
                                                 showSendMoney(context, s);
                                               case 1:
@@ -218,7 +222,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                               case 5:
                                                 break;
                                             }
-                                          }))
+                                          })),
+                                if (row == 1)
+                                  for (int empty = 0; empty < 2; empty++)
+                                    const Expanded(child: SizedBox.shrink()),
                               ])
                             ],
                             gap(12),
@@ -236,7 +243,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       sectionTitle(s.tr('Quick Send', 'দ্রুত পাঠান'), p),
                       gap(12),
                       disabledFeature(SizedBox(
-                          height: 90,
+                          height: 110,
                           child: ListView(
                               scrollDirection: Axis.horizontal,
                               children: [
@@ -277,41 +284,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 lines: 1)
                                           ])))
                               ]))),
-                      for (final a in s.accounts
-                          .where((a) => a.type == AccountType.MFI_LOAN)
-                          .take(1))
-                        disabledFeature(panel(
-                            p,
-                            Row(children: [
-                              const Icon(Icons.calendar_month,
-                                  color: Color(0xFFD97706), size: 28),
-                              hgap(12),
-                              Expanded(
-                                  child: stack([
-                                text(
-                                    s.tr('Upcoming Loan EMI',
-                                        'আসন্ন ঋণের কিস্তি'),
-                                    size: 12,
-                                    color: p.ink),
-                                text(
-                                    '${s.money(a.nextInstallmentAmount ?? 0)} • ${s.bengali ? a.nextDueDateBn : a.nextDueDateEn}',
-                                    size: 11,
-                                    color: p.muted)
-                              ], spacing: 4)),
-                              link(s.tr('Pay Now', 'পরিশোধ করুন'), () {
-                                showBackendUnavailable(context, s, loan: true);
-                              }, color: const Color(0xFFD97706))
-                            ]),
-                            color: s.dark ? p.surface : const Color(0xFFFFFBEB),
-                            padding: 14,
-                            radius: 16)),
-                      gap(14),
                       CashFlowCard(
                           state: s,
                           onSeeAll: () => s.navigate(AppNavTab.PAYMENTS)),
                       gap(14),
-                      PromoCarousel(state: s),
-                      gap(18),
                       Row(children: [
                         for (final label in [
                           s.tr('My Offer', 'মাই অফার'),
@@ -452,13 +428,12 @@ class CashFlowCard extends StatelessWidget {
             s.timeframe = v;
             s.changed();
           }, p),
-          Row(children: [
-            Expanded(
-                child: stack([
+          Wrap(alignment: WrapAlignment.spaceBetween, runSpacing: 8, children: [
+                stack([
               text(s.tr('Net Spending', 'মোট ব্যয়'), size: 11, color: p.muted),
               text(s.money(s.spending * [.18, 1, 12][idx]),
                   size: 20, color: p.ink)
-            ], spacing: 4)),
+            ], spacing: 4),
             pill(
                 [
                   '▼ 12.4% vs last week',
@@ -475,7 +450,7 @@ class CashFlowCard extends StatelessWidget {
           Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children:
-                  labels.map((v) => text(v, size: 10, color: p.muted)).toList())
+                  labels.map((v) => Expanded(child: text(v, size: 10, color: p.muted, align: TextAlign.center, lines: 1))).toList())
         ], spacing: 12),
         radius: 22,
         padding: 18);

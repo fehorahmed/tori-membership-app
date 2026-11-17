@@ -17,7 +17,7 @@ class WelcomeScreen extends StatefulWidget {
 
 class _WelcomeScreenState extends State<WelcomeScreen> {
   AuthStep step = AuthStep.mobile;
-  final mobile = TextEditingController(text: '1755 892 401'),
+  final mobile = TextEditingController(),
       pin = TextEditingController(),
       confirmPin = TextEditingController(),
       otp = TextEditingController();
@@ -285,9 +285,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                   Padding(
                                       padding: const EdgeInsets.only(
                                           top: 24, bottom: 8),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
+                                      child: Wrap(
+                                        alignment: WrapAlignment.center,
+                                        crossAxisAlignment: WrapCrossAlignment.center,
                                         children: [
                                           Icon(Icons.shield_outlined,
                                               size: 13,
@@ -391,7 +391,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 child: Padding(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    child: Wrap(alignment: WrapAlignment.center, crossAxisAlignment: WrapCrossAlignment.center, children: [
                       const Icon(Icons.fingerprint_rounded,
                           size: 20, color: Color(0xFF0D9488)),
                       hgap(8),
@@ -405,7 +405,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           )
         ])),
         gap(20),
-        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Wrap(alignment: WrapAlignment.center, crossAxisAlignment: WrapCrossAlignment.center, children: [
           text(tr("Don't have an account? ", 'অ্যাকাউন্ট নেই? '),
               size: 13.5, color: p.muted),
           link(
