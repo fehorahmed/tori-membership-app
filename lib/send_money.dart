@@ -1,3 +1,4 @@
+import 'services/beneficiary_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'state.dart';
@@ -6,9 +7,15 @@ import 'ui.dart';
 import 'services/send_money_service.dart';
 
 Future<void> showSendMoney(BuildContext context, ToriState state,
-    {String? initialRecipient}) async {
-  await openPage<void>(context, state, state.tr('Send Money', 'টাকা পাঠান'),
-      (_) => SendMoneyPage(state: state, initialRecipient: initialRecipient));
+    {String? initialRecipient, int? recipientId}) async {
+  await openPage<void>(
+      context,
+      state,
+      state.tr('Send Money', 'টাকা পাঠান'),
+      (_) => SendMoneyPage(
+          state: state,
+          initialRecipient: initialRecipient,
+          recipientId: recipientId));
   await state.loadDashboardData();
 }
 
@@ -16,8 +23,13 @@ class SendMoneyPage extends StatefulWidget {
   final ToriState state;
   final SendMoneyService? service;
   final String? initialRecipient;
+  final int? recipientId;
   const SendMoneyPage(
-      {super.key, required this.state, this.service, this.initialRecipient});
+      {super.key,
+      required this.state,
+      this.service,
+      this.initialRecipient,
+      this.recipientId});
   @override
   State<SendMoneyPage> createState() => _SendMoneyPageState();
 }
@@ -30,12 +42,14 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
   Map<String, dynamic>? data, quote, pending;
   bool busy = false, loading = true;
   String? error, receipt;
+  int? selectedRecipient, completedRecipient;
   ToriState get s => widget.state;
   String get lang => s.bengali ? 'bn' : 'en';
   @override
   void initState() {
     super.initState();
     recipient.text = widget.initialRecipient ?? '';
+    selectedRecipient = widget.recipientId;
     load();
   }
 
@@ -60,6 +74,7 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
             await service.clear(next['customer_id']);
             saved = null;
             receipt = row['reference'];
+            completedRecipient = row['recipient_id'];
             break;
           }
         }
@@ -92,8 +107,9 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
       error = null;
       receipt = null;
     });
-    final result =
-        await service.quote(recipient.text.trim(), amount.text.trim(), lang);
+    final result = await service.quote(
+        recipient.text.trim(), amount.text.trim(), lang,
+        recipientId: selectedRecipient);
     if (!mounted) return;
     setState(() {
       busy = false;
@@ -167,6 +183,9 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
       pin.clear();
       if (result['success'] == true) {
         receipt = result['data']['reference'];
+        completedRecipient =
+            result['data']['recipient_id'] ?? reviewed['recipient_id'];
+        selectedRecipient = null;
         quote = null;
         recipient.clear();
         amount.clear();
@@ -191,6 +210,26 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
             text(
                 '${s.tr('Transfer completed', 'ট্রান্সফার সম্পন্ন হয়েছে')}\n$receipt',
                 color: p.primary)),
+      if (receipt != null && completedRecipient != null)
+        TextButton.icon(
+            icon: const Icon(Icons.person_add_alt_1),
+            label: Text(s.tr('Add to Quick Send', 'Quick Send-এ যোগ করুন')),
+            onPressed: busy
+                ? null
+                : () async {
+                    setState(() => busy = true);
+                    final favourites = BeneficiaryService();
+                    final result =
+                        await favourites.save(completedRecipient!, '', lang);
+                    favourites.close();
+                    if (!mounted) return;
+                    setState(() => busy = false);
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(result['success'] == true
+                            ? s.tr('Saved in Quick Send',
+                                'Quick Send-এ রাখা হয়েছে')
+                            : result['message'] ?? 'Unable to save')));
+                  }),
       if (data != null) ...[
         text(
             '${s.tr('Available savings', 'ব্যবহারযোগ্য সঞ্চয়')}: ৳ ${data!['available_balance']}',
@@ -212,7 +251,8 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
               s.tr('Recipient mobile number or Member ID',
                   'প্রাপকের মোবাইল নম্বর অথবা মেম্বার আইডি'),
               recipient,
-              p),
+              p,
+              onChanged: (_) => selectedRecipient = null),
           field(s.tr('Amount', 'পরিমাণ'), amount, p,
               keyboard: const TextInputType.numberWithOptions(decimal: true)),
           primary(s.tr('Review transfer', 'ট্রান্সফার পর্যালোচনা করুন'),

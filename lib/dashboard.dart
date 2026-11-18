@@ -1,3 +1,4 @@
+import 'quick_send.dart';
 import 'send_money.dart';
 import 'cashout.dart';
 import 'dart:async';
@@ -240,50 +241,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           padding: 16,
                           radius: 22),
                       gap(20),
-                      sectionTitle(s.tr('Quick Send', 'দ্রুত পাঠান'), p),
-                      gap(12),
-                      disabledFeature(SizedBox(
-                          height: 110,
-                          child: ListView(
-                              scrollDirection: Axis.horizontal,
-                              children: [
-                                SizedBox(
-                                    width: 66,
-                                    child: Column(children: [
-                                      roundIcon(Icons.add, p,
-                                          size: 48, onTap: () {}),
-                                      gap(6),
-                                      text(s.tr('Add New', 'নতুন'),
-                                          size: 11, color: p.muted)
-                                    ])),
-                                for (final f in s.favorites)
-                                  SizedBox(
-                                      width: 72,
-                                      child: InkWell(
-                                          onTap: () {
-                                            s.selectFavorite(f);
-                                            s.navigate(AppNavTab.PAYMENTS);
-                                          },
-                                          child: Column(children: [
-                                            CircleAvatar(
-                                                radius: 24,
-                                                backgroundColor:
-                                                    Color(f.badgeColorHex)
-                                                        .withValues(alpha: .12),
-                                                child: text(
-                                                    f.initials ??
-                                                        f.shortName
-                                                            .substring(0, 1),
-                                                    size: 17,
-                                                    color: Color(
-                                                        f.badgeColorHex))),
-                                            gap(6),
-                                            text(f.shortName,
-                                                size: 11,
-                                                color: p.ink,
-                                                lines: 1)
-                                          ])))
-                              ]))),
+                      QuickSendPanel(state: s),
                       CashFlowCard(
                           state: s,
                           onSeeAll: () => s.navigate(AppNavTab.PAYMENTS)),

@@ -59,9 +59,13 @@ class SendMoneyService {
   Future<Map<String, dynamic>> load(String language) =>
       send('transfers', language);
   Future<Map<String, dynamic>> quote(
-          String code, String amount, String language) =>
-      send('transfers/quote', language,
-          body: {'recipient': code, 'amount': amount});
+          String code, String amount, String language,
+          {int? recipientId}) =>
+      send('transfers/quote', language, body: {
+        if (recipientId != null) 'recipient_id': recipientId,
+        'recipient': code,
+        'amount': amount
+      });
   Future<Map<String, dynamic>?> pending(int customer) async {
     final prefs = await SharedPreferences.getInstance();
     final value = prefs.getString('send_money_pending_$customer');
