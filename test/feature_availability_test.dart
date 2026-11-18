@@ -6,7 +6,7 @@ import 'package:tori_mfi_bank/profile.dart';
 import 'package:tori_mfi_bank/state.dart';
 
 void main() {
-  testWidgets('Disconnected home services have no tap action', (tester) async {
+  testWidgets('Home displays six connected service cards', (tester) async {
     await tester.pumpWidget(
         MaterialApp(home: Scaffold(body: HomeScreen(state: ToriState()))));
     final tiles =
@@ -15,7 +15,9 @@ void main() {
     expect(tiles[1].enabled, true);
     expect(tiles[1].label, 'Branch Cash-out');
     expect(tiles[2].enabled, true);
-    expect(tiles[3].enabled, false);
+    expect(tiles.length, 6);
+    expect(tiles.every((tile) => tile.enabled), true);
+    expect(tiles.map((tile) => tile.label), containsAll(['My Card', 'Referral Points', 'Statement']));
   });
   testWidgets(
       'Profile keeps backend profile and card active, disables local-only options',

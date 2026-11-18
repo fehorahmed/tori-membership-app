@@ -28,9 +28,10 @@ void main() {
             await tester.pump();
             expect(tester.takeException(), isNull, reason: '${screen.runtimeType} at $width, scale=$scale, bn=$bengali');
             if (screen is HomeScreen) {
-              await tester.tap(find.text(state.tr('See More ⌄', 'আরও দেখুন ⌄')));
-              await tester.pump();
-              expect(tester.takeException(), isNull, reason: 'Expanded Home at $width');
+              expect(find.byType(ServiceTile), findsNWidgets(6));
+              final grid = tester.widget<GridView>(find.byKey(const Key('home-service-grid')));
+              final delegate = grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
+              expect(delegate.crossAxisCount, width < 370 ? 2 : 3);
             }
             await tester.pumpWidget(const SizedBox.shrink());
           }

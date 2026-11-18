@@ -1,3 +1,5 @@
+import 'profile.dart' show showCard;
+import 'referrals.dart' show showReferrals;
 import 'quick_send.dart';
 import 'send_money.dart';
 import 'cashout.dart';
@@ -17,7 +19,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool expanded = false, revealed = false;
+  bool revealed = false;
   Timer? timer;
   ToriState get s => widget.state;
   Palette get p => Palette(s.dark);
@@ -158,88 +160,50 @@ class _HomeScreenState extends State<HomeScreen> {
                                     onTap: s.toggleTheme)
                               ]))),
                       gap(20),
-                      panel(
-                          p,
-                          Column(children: [
-                            for (int row = 0;
-                                row < (expanded ? 2 : 1);
-                                row++) ...[
-                              if (row > 0) gap(16),
-                              Row(children: [
-                                for (final i in const [0, 8, 1, 5, 6, 7].skip(row * 4).take(4))
-                                  Expanded(
-                                      child: ServiceTile(
-                                          enabled: i == 0 || i == 1 || i == 7 || i == 8,
-                                          label: [
-                                            s.tr('Send Money', 'সেন্ড মানি'),
-                                            s.tr('Passbook', 'পাসবুক'),
-                                            'DPS',
-                                            'FDR',
-                                            s.tr('Loan', 'লোন'),
-                                            s.tr('Add Money', 'অ্যাড মানি'),
-                                            s.tr('Savings', 'সঞ্চয়'),
-                                            s.tr('Statement', 'স্টেটমেন্ট'),
-                                            s.tr('Branch Cash-out', 'ব্রাঞ্চ ক্যাশ আউট')
-                                          ][i],
-                                          icon: const [
-                                            Icons.send,
-                                            Icons.description,
-                                            Icons.savings,
-                                            Icons.account_balance,
-                                            Icons.request_quote,
-                                            Icons.add_card,
-                                            Icons.account_balance_wallet,
-                                            Icons.list_alt,
-                                            Icons.storefront
-                                          ][i],
-                                          color: const [
-                                            Color(0xFFE11D48),
-                                            Color(0xFF0D9488),
-                                            Color(0xFF7C3AED),
-                                            Color(0xFFD97706),
-                                            Color(0xFF2563EB),
-                                            Color(0xFF0891B2),
-                                            Color(0xFF4F46E5),
-                                            Color(0xFF64748B),
-                                            Color(0xFFD97706)
-                                          ][i],
-                                          p: p,
-                                          onTap: () {
-                                            switch (i) {
-                                              case 8:
-                                                showCashout(context, s);
-                                              case 0:
-                                                showSendMoney(context, s);
-                                              case 1:
-                                              case 7:
-                                                showStatement(context, s);
-                                              case 2:
-                                              case 3:
-                                              case 6:
-                                                accounts(
-                                                    AccountCategory.DEPOSIT);
-                                              case 4:
-                                                accounts(AccountCategory.LOANS);
-                                              case 5:
-                                                break;
-                                            }
-                                          })),
-                                if (row == 1)
-                                  for (int empty = 0; empty < 2; empty++)
-                                    const Expanded(child: SizedBox.shrink()),
-                              ])
-                            ],
-                            gap(12),
-                            link(
-                                expanded
-                                    ? s.tr('See Less ⌃', 'সংক্ষিপ্ত করুন ⌃')
-                                    : s.tr('See More ⌄', 'আরও দেখুন ⌄'),
-                                () => setState(() => expanded = !expanded),
-                                color: const Color(0xFFE11D48),
-                                size: 11)
-                          ]),
-                          padding: 16,
-                          radius: 22),
+                      LayoutBuilder(builder: (context, constraints) {
+                        final columns = constraints.maxWidth < 330 ? 2 : 3;
+                        final scaler = MediaQuery.textScalerOf(context);
+                        final labels = [s.tr('Send Money', 'সেন্ড মানি'),
+                          s.tr('Branch Cash-out', 'ব্রাঞ্চ ক্যাশ আউট'),
+                          s.tr('My Card', 'আমার কার্ড'),
+                          s.tr('Passbook', 'পাসবুক'),
+                          s.tr('Statement', 'স্টেটমেন্ট'),
+                          s.tr('Referral Points', 'রেফারেল পয়েন্ট')];
+                        final actions = <VoidCallback>[
+                          () => showSendMoney(context, s),
+                          () => showCashout(context, s),
+                          () => showCard(context, s),
+                          () => showStatement(context, s),
+                          () => showStatement(context, s),
+                          () => showReferrals(context, s),
+                        ];
+                        final cardWidth = (constraints.maxWidth - (columns - 1) * 12) / columns;
+                        final labelHeight = labels.fold<double>(0, (height, label) {
+                          final painter = TextPainter(
+                            text: TextSpan(text: label, style: font(13, color: p.ink, weight: FontWeight.w600).copyWith(height: 1.35)),
+                            textDirection: Directionality.of(context), textScaler: scaler,
+                            maxLines: 3)..layout(maxWidth: cardWidth - 24);
+                          return painter.height > height ? painter.height : height;
+                        });
+                        final cardHeight = (40 + 10 + labelHeight + 36).clamp(118.0, double.infinity);
+                        return GridView.builder(
+                          key: const Key('home-service-grid'),
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          padding: EdgeInsets.zero,
+                          itemCount: labels.length,
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: columns,
+                            crossAxisSpacing: 12, mainAxisSpacing: 12,
+                            mainAxisExtent: cardHeight),
+                          itemBuilder: (_, i) => ServiceTile(
+                            label: labels[i],
+                            icon: const [Icons.send_outlined, Icons.qr_code_scanner,
+                              Icons.credit_card_outlined, Icons.description_outlined,
+                              Icons.receipt_long_outlined, Icons.stars_outlined][i],
+                            color: p.primary, p: p, onTap: actions[i]),
+                        );
+                      }),
                       gap(20),
                       QuickSendPanel(state: s),
                       CashFlowCard(
@@ -331,27 +295,33 @@ class ServiceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Opacity(
       opacity: enabled ? 1 : .4,
-      child: InkWell(
-          onTap: enabled ? onTap : null,
-          child: Column(children: [
-            Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                    color: color.withValues(alpha: .12),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: color.withValues(alpha: .2))),
-                child: Icon(icon, color: color, size: 26)),
-            gap(6),
-            SizedBox(
-                height: 28,
-                child: text(label,
-                    size: 10.5,
-                    color: p.ink,
-                    align: TextAlign.center,
-                    lines: 2,
-                    weight: FontWeight.w500))
-          ])));
+      child: Container(
+        decoration: BoxDecoration(
+          color: p.surface,
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [p.surface, Color.alphaBlend(color.withValues(alpha: .045), p.surface)]),
+          border: Border.all(color: color.withValues(alpha: .12)),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? .18 : .07),
+            blurRadius: 12, offset: const Offset(0, 4))]),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(onTap: enabled ? onTap : null,
+            child: Padding(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Container(width: 40, height: 40,
+                  decoration: BoxDecoration(color: color.withValues(alpha: .09),
+                    borderRadius: BorderRadius.circular(13)),
+                  child: Icon(icon, color: color, size: 25)),
+                const SizedBox(height: 10),
+                Text(label, textAlign: TextAlign.center, maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: font(13, color: p.ink, weight: FontWeight.w600).copyWith(height: 1.35)),
+              ]))),
+        ),
+      ));
 }
 
 class CashFlowCard extends StatelessWidget {
