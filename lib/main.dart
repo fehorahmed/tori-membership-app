@@ -31,7 +31,7 @@ class ToriBankApp extends StatelessWidget {
       animation: state,
       builder: (context, _) => MaterialApp(
           debugShowCheckedModeBanner: false,
-          title: 'TORI Bank',
+          title: 'Tori Member',
           theme: buildTheme(false),
           darkTheme: buildTheme(true),
           themeMode: state.dark ? ThemeMode.dark : ThemeMode.light,
