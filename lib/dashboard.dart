@@ -127,7 +127,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                         fit: BoxFit.scaleDown,
                                                         alignment: Alignment.centerLeft,
                                                         child: text(
-                                                          revealed ? s.money(s.balance) : s.tr('Tap for Balance', 'ব্যালেন্স দেখুন'),
+                                                          revealed ? (s.dashboardBalanceLoaded ? s.money(s.balance) : s.dashboardLoading ? s.tr('Loading…', 'লোড হচ্ছে…') : s.tr('Unavailable', 'পাওয়া যায়নি')) : s.tr('Tap for Balance', 'ব্যালেন্স দেখুন'),
                                                           size: 12, color: p.ink, weight: FontWeight.w600),
                                                       ),
                                                     ),

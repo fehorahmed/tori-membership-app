@@ -18,7 +18,8 @@ class ToriState extends ChangeNotifier {
   String get loanUnavailable => tr(
       'Live MFI Loan payment endpoint not provisioned (Source of Truth enforcement).',
       'লোন কিস্তি পেমেন্ট সার্ভার এন্ডপয়েন্ট কনফিগার করা হয়নি (সততা নীতি লঙ্ঘন প্রতিরোধ)।');
-  double balance = 160450;
+  double balance = 0;
+  bool dashboardBalanceLoaded = false;
   Map<String, dynamic>? referredBy;
   String get referrerDescription {
     final referral = referredBy;
@@ -27,7 +28,7 @@ class ToriState extends ChangeNotifier {
     final name = referral['name'] ?? tr('Record unavailable', 'তথ্য পাওয়া যায়নি');
     return '$name ($type) · ${referral['code']}';
   }
-  List<AccountItem> accounts = initialAccounts();
+  List<AccountItem> accounts = [];
   List<TransactionItem> transactions = [];
   List<FavoriteContact> favorites = initialFavorites();
   List<NotificationItem> notifications = initialNotifications();
@@ -109,6 +110,9 @@ class ToriState extends ChangeNotifier {
   int _memberEpoch = 0;
 
   void logout() {
+    balance = 0;
+    accounts = [];
+    dashboardBalanceLoaded = false;
     profile = profile.copyWith(rewardPoints: 0);
     referredBy = null;
     _memberEpoch++;
@@ -126,6 +130,9 @@ class ToriState extends ChangeNotifier {
       ? value.length >= 4 && value.length <= 6
       : value == securityPin;
   void login() {
+    balance = 0;
+    accounts = [];
+    dashboardBalanceLoaded = false;
     referredBy = null;
     _memberEpoch++;
     transactions = [];
@@ -221,10 +228,17 @@ class ToriState extends ChangeNotifier {
       profile = profile.copyWith(
           rewardPoints: (summary?['referral_points'] as num?) ?? 0);
 
+      if (summary == null) dashboardError = tr('Could not load your balance. Please retry.', 'ব্যালেন্স লোড করা যায়নি। আবার চেষ্টা করুন।');
       // Update Real Savings Balance
       if (summary != null) {
-        balance = (summary['savings_balance'] as num?)?.toDouble() ?? balance;
-        _syncBalance();
+        final parsed = double.tryParse('${summary['savings_balance']}');
+        if (parsed != null && parsed.isFinite && parsed >= 0) {
+          balance = parsed;
+          dashboardBalanceLoaded = true;
+          _syncBalance();
+        } else {
+          dashboardError = tr('Could not load your balance. Please retry.', 'ব্যালেন্স লোড করা যায়নি। আবার চেষ্টা করুন।');
+        }
       }
 
       changed();
