@@ -331,15 +331,20 @@ class CashFlowCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = state, p = Palette(s.dark), idx = s.timeframe;
-    final data = <List<double>>[
-      [15, 30, 25, 40, 35, 20, 15],
-      [20, 45, 35, 60, 48, 75, 55],
-      [40, 55, 65, 85]
-    ][idx];
-    final labels = [
-      ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-      ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
-      ['2021', '2022', '2023', '2024']
+    final flow = s.cashFlows[['day', 'week', 'month', 'year'][idx]] as Map?;
+    final inflow = (flow?['inflow'] as List? ?? [])
+        .map((v) => (v as num).toDouble())
+        .toList();
+    final outflow = (flow?['outflow'] as List? ?? [])
+        .map((v) => (v as num).toDouble())
+        .toList();
+    final labels = (flow?['labels'] as List? ?? []).map((v) => '$v').toList();
+    final change = (flow?['change_percent'] as num?)?.toDouble();
+    final comparison = [
+      s.tr('vs yesterday', 'গতকালের তুলনায়'),
+      s.tr('vs last week', 'গত সপ্তাহের তুলনায়'),
+      s.tr('vs last month', 'গত মাসের তুলনায়'),
+      s.tr('vs last year', 'গত বছরের তুলনায়')
     ][idx];
     return panel(
         p,
@@ -349,6 +354,7 @@ class CashFlowCard extends StatelessWidget {
           text(s.tr('Inflow vs Outflow River Chart', 'আয় ও ব্যয়ের প্রবাহ'),
               size: 11, color: p.muted),
           tabs([
+            s.tr('Day', 'দিন'),
             s.tr('Week', 'সপ্তাহ'),
             s.tr('Month', 'মাস'),
             s.tr('Year', 'বছর')
@@ -357,28 +363,54 @@ class CashFlowCard extends StatelessWidget {
             s.changed();
           }, p),
           Wrap(alignment: WrapAlignment.spaceBetween, runSpacing: 8, children: [
-                stack([
+            stack([
               text(s.tr('Net Spending', 'মোট ব্যয়'), size: 11, color: p.muted),
-              text(s.money(s.spending * [.18, 1, 12][idx]),
-                  size: 20, color: p.ink)
+              text(
+                  flow == null
+                      ? '—'
+                      : s.money((flow['total_outflow'] as num).toDouble()),
+                  size: 20,
+                  color: p.ink)
             ], spacing: 4),
-            pill(
-                [
-                  '▼ 12.4% vs last week',
-                  '▲ 8.2% vs last month',
-                  '▲ 4.8% vs last year'
-                ][idx],
-                idx == 0 ? p.primary : p.error,
-                size: 10)
+            if (change != null)
+              pill(
+                  '${change < 0 ? '▼' : change > 0 ? '▲' : '•'} ${change.abs().toStringAsFixed(1)}% $comparison',
+                  change <= 0 ? p.primary : p.error,
+                  size: 10)
           ]),
-          SizedBox(
-              height: 140,
-              width: double.infinity,
-              child: CustomPaint(painter: RiverChart(data, p))),
-          Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children:
-                  labels.map((v) => Expanded(child: text(v, size: 10, color: p.muted, align: TextAlign.center, lines: 1))).toList())
+          if (flow == null)
+            text(
+                s.dashboardLoading
+                    ? s.tr('Loading…', 'লোড হচ্ছে…')
+                    : s.tr('Cash flow data unavailable',
+                        'ক্যাশ ফ্লোর তথ্য পাওয়া যায়নি'),
+                color: p.muted)
+          else ...[
+            Wrap(spacing: 16, runSpacing: 6, children: [
+              text(
+                  '● ${s.tr('Inflow', 'জমা')}: ${s.money((flow['total_inflow'] as num).toDouble())}',
+                  size: 11,
+                  color: p.primary),
+              text(
+                  '● ${s.tr('Outflow', 'উত্তোলন')}: ${s.money((flow['total_outflow'] as num).toDouble())}',
+                  size: 11,
+                  color: const Color(0xFFFB7185)),
+            ]),
+            SizedBox(
+                height: 140,
+                width: double.infinity,
+                child: CustomPaint(painter: RiverChart(inflow, outflow, p))),
+            Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: labels
+                    .map((v) => Expanded(
+                        child: text(v,
+                            size: 10,
+                            color: p.muted,
+                            align: TextAlign.center,
+                            lines: 1)))
+                    .toList()),
+          ]
         ], spacing: 12),
         radius: 22,
         padding: 18);
@@ -386,9 +418,9 @@ class CashFlowCard extends StatelessWidget {
 }
 
 class RiverChart extends CustomPainter {
-  final List<double> values;
+  final List<double> inflow, outflow;
   final Palette p;
-  RiverChart(this.values, this.p);
+  RiverChart(this.inflow, this.outflow, this.p);
   @override
   void paint(Canvas c, Size s) {
     for (int i = 0; i < 4; i++)
@@ -398,22 +430,21 @@ class RiverChart extends CustomPainter {
           Paint()
             ..color = p.border
             ..strokeWidth = .5);
+    final maximum =
+        [...inflow, ...outflow].fold<double>(0, (a, b) => a > b ? a : b);
+    final scale = maximum > 0 ? maximum * 1.15 : 1.0;
     for (int series = 1; series >= 0; series--) {
+      final values = series == 0 ? inflow : outflow;
+      if (values.length < 2) continue;
       final path = Path();
       for (int i = 0; i < values.length; i++) {
         final x = s.width * i / (values.length - 1),
-            y = s.height -
-                (values[i] * (series == 0 ? 1 : .65) + series * 12) /
-                    100 *
-                    s.height;
+            y = s.height - values[i] / scale * s.height;
         if (i == 0)
           path.moveTo(x, y);
         else {
           final px = s.width * (i - 1) / (values.length - 1),
-              py = s.height -
-                  (values[i - 1] * (series == 0 ? 1 : .65) + series * 12) /
-                      100 *
-                      s.height;
+              py = s.height - values[i - 1] / scale * s.height;
           path.cubicTo((px + x) / 2, py, (px + x) / 2, y, x, y);
         }
       }

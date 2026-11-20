@@ -1,3 +1,4 @@
+import 'kyc_access.dart';
 import 'cashout.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -103,6 +104,41 @@ class _BankRootState extends State<BankRoot> {
             s.dark ? Brightness.light : Brightness.dark));
     if (!online) return OfflineScreen(state: s, onRetry: check);
     if (!s.loggedIn) return WelcomeScreen(state: s);
+    if (s.memberProfileLoaded && !s.kycReminderShown) {
+      s.kycReminderShown = true;
+      final epoch = s.memberEpoch;
+      if (!['Pending', 'Verified'].contains(s.kyc.status)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if (!mounted || !s.loggedIn || epoch != s.memberEpoch) return;
+          final submit = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                    scrollable: true,
+                    title: Text(
+                        s.tr('Complete your KYC', 'কেওয়াইসি সম্পন্ন করুন')),
+                    content: Text(s.kyc.status == 'Rejected'
+                        ? s.tr('Your KYC was rejected. Please submit again.',
+                                'আপনার কেওয়াইসি বাতিল হয়েছে। আবার জমা দিন।') +
+                            (s.kyc.reviewerMessage?.isNotEmpty == true
+                                ? '\n${s.kyc.reviewerMessage}'
+                                : '')
+                        : s.tr(
+                            'Submit your KYC to use Send Money and Branch Cash-out.',
+                            'টাকা পাঠানো ও শাখা থেকে ক্যাশ আউট করতে কেওয়াইসি জমা দিন।')),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: Text(s.tr('Close', 'বন্ধ করুন'))),
+                      FilledButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: Text(s.tr('Submit KYC', 'কেওয়াইসি জমা দিন')))
+                    ],
+                  ));
+          if (submit == true && mounted && s.loggedIn && epoch == s.memberEpoch)
+            await openKyc(context, s);
+        });
+      }
+    }
     return PopScope(
         canPop: s.tab == AppNavTab.HOME,
         onPopInvokedWithResult: (popped, result) {

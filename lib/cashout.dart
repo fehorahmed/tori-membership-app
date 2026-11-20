@@ -1,3 +1,4 @@
+import 'kyc_access.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -255,6 +256,10 @@ class _CashoutPageState extends State<CashoutPage> {
   Widget build(BuildContext context) {
     final p = Palette(s.dark);
     if (loading) return const Center(child: CircularProgressIndicator());
+    if (data != null && data!['kyc_approved'] == false) {
+      return KycAccessNotice(
+          state: s, status: data!['kyc_status'] ?? 'Not submitted');
+    }
     final reviewData = uncertain?['quote_data'] ?? quote;
     return pageBody([
       if (error != null) text(error!, color: p.error),

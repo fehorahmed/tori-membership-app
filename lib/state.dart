@@ -23,11 +23,16 @@ class ToriState extends ChangeNotifier {
   Map<String, dynamic>? referredBy;
   String get referrerDescription {
     final referral = referredBy;
-    if (referral == null) return tr('No referral recorded', 'রেফারেন্সের তথ্য নেই');
-    final type = referral['type'] == 'member' ? tr('Member', 'মেম্বার') : tr('Agent', 'এজেন্ট');
-    final name = referral['name'] ?? tr('Record unavailable', 'তথ্য পাওয়া যায়নি');
+    if (referral == null)
+      return tr('No referral recorded', 'রেফারেন্সের তথ্য নেই');
+    final type = referral['type'] == 'member'
+        ? tr('Member', 'মেম্বার')
+        : tr('Agent', 'এজেন্ট');
+    final name =
+        referral['name'] ?? tr('Record unavailable', 'তথ্য পাওয়া যায়নি');
     return '$name ($type) · ${referral['code']}';
   }
+
   List<AccountItem> accounts = [];
   List<TransactionItem> transactions = [];
   List<FavoriteContact> favorites = initialFavorites();
@@ -45,7 +50,8 @@ class ToriState extends ChangeNotifier {
   TransferChannel channel = TransferChannel.TORI_ACCOUNT;
   String recipient = '01719 283741', recipientName = 'Tanima H.', note = '';
   double amount = 15000;
-  int timeframe = 1;
+  int timeframe = 2;
+  Map<String, dynamic> cashFlows = {};
   String securityPin = '982341';
   SharedPreferences? _prefs;
   bool get dark => theme == AppThemeMode.DARK;
@@ -108,14 +114,20 @@ class ToriState extends ChangeNotifier {
   bool dashboardLoading = false;
   String? dashboardError;
   int _memberEpoch = 0;
+  int get memberEpoch => _memberEpoch;
+  bool memberProfileLoaded = false;
+  bool kycReminderShown = false;
 
   void logout() {
     balance = 0;
     accounts = [];
     dashboardBalanceLoaded = false;
+    cashFlows = {};
     profile = profile.copyWith(rewardPoints: 0);
     referredBy = null;
     _memberEpoch++;
+    memberProfileLoaded = false;
+    kycReminderShown = false;
     dashboardLoading = false;
     dashboardError = null;
     transactions = [];
@@ -133,8 +145,11 @@ class ToriState extends ChangeNotifier {
     balance = 0;
     accounts = [];
     dashboardBalanceLoaded = false;
+    cashFlows = {};
     referredBy = null;
     _memberEpoch++;
+    memberProfileLoaded = false;
+    kycReminderShown = false;
     transactions = [];
     profile = profile.copyWith(
         rewardPoints: 0,
@@ -161,7 +176,10 @@ class ToriState extends ChangeNotifier {
   }
 
   void applyMemberProfile(Map<String, dynamic> data) {
-    referredBy = data['referred_by'] is Map ? Map<String, dynamic>.from(data['referred_by']) : null;
+    memberProfileLoaded = true;
+    referredBy = data['referred_by'] is Map
+        ? Map<String, dynamic>.from(data['referred_by'])
+        : null;
     final details = data['kyc'] as Map<String, dynamic>? ?? {};
     final documents = details['documents'] is Map
         ? Map<String, dynamic>.from(details['documents'])
@@ -188,11 +206,14 @@ class ToriState extends ChangeNotifier {
 
   Future<Map<String, dynamic>> loadMemberProfile(
       {ProfileService? service}) async {
+    final epoch = _memberEpoch;
     final client = service ?? ProfileService();
     final result = await client.fetch(language: bengali ? 'bn' : 'en');
     if (service == null) client.close();
-    if (result['success'] == true) {
-      memberImageHeaders = await ProfileService.headers();
+    if (result['success'] == true && epoch == _memberEpoch) {
+      final headers = await ProfileService.headers();
+      if (epoch != _memberEpoch) return result;
+      memberImageHeaders = headers;
       applyMemberProfile(result['data']);
     }
     return result;
@@ -210,6 +231,9 @@ class ToriState extends ChangeNotifier {
       final data = res['data'];
       final cust = data['customer'];
       final summary = data['summary'];
+      cashFlows = data['cash_flow'] is Map
+          ? Map<String, dynamic>.from(data['cash_flow'])
+          : {};
       transactions = (data['recent_transactions'] as List? ?? [])
           .map(
               (row) => TransactionItem.fromJson(Map<String, dynamic>.from(row)))
@@ -228,7 +252,9 @@ class ToriState extends ChangeNotifier {
       profile = profile.copyWith(
           rewardPoints: (summary?['referral_points'] as num?) ?? 0);
 
-      if (summary == null) dashboardError = tr('Could not load your balance. Please retry.', 'ব্যালেন্স লোড করা যায়নি। আবার চেষ্টা করুন।');
+      if (summary == null)
+        dashboardError = tr('Could not load your balance. Please retry.',
+            'ব্যালেন্স লোড করা যায়নি। আবার চেষ্টা করুন।');
       // Update Real Savings Balance
       if (summary != null) {
         final parsed = double.tryParse('${summary['savings_balance']}');
@@ -237,7 +263,8 @@ class ToriState extends ChangeNotifier {
           dashboardBalanceLoaded = true;
           _syncBalance();
         } else {
-          dashboardError = tr('Could not load your balance. Please retry.', 'ব্যালেন্স লোড করা যায়নি। আবার চেষ্টা করুন।');
+          dashboardError = tr('Could not load your balance. Please retry.',
+              'ব্যালেন্স লোড করা যায়নি। আবার চেষ্টা করুন।');
         }
       }
 
