@@ -19,6 +19,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final name = TextEditingController(),
       mobile = TextEditingController(),
       email = TextEditingController(),
+      address = TextEditingController(),
       password = TextEditingController(),
       confirmation = TextEditingController(),
       referral = TextEditingController(),
@@ -27,6 +28,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       pinConfirmation = TextEditingController();
   List<Map<String, dynamic>> branches = [];
   int? branch;
+  final locations = List.generate(5, (_) => <Map<String, dynamic>>[]);
+  final locationValues = List<String?>.filled(5, null);
+  bool locationBusy = false;
+  String? locationError;
+  VoidCallback? retryLocations;
+  int locationVersion = 0;
   String referralType = 'member';
   int step = 0, countdown = 0;
   bool consent = false, busy = false, loading = true, showPassword = false;
@@ -49,6 +56,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       name,
       mobile,
       email,
+      address,
       password,
       confirmation,
       referral,
@@ -77,6 +85,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       if (mounted)
         setState(() {
           branches = List<Map<String, dynamic>>.from(data['data']['branches']);
+          locations[0] =
+              List<Map<String, dynamic>>.from(data['data']['divisions'] ?? []);
         });
     } catch (_) {
       if (mounted)
@@ -85,6 +95,110 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     } finally {
       if (mounted) setState(() => loading = false);
     }
+  }
+
+  Future<void> chooseLocation(int index, String? value) async {
+    setState(() {
+      locationValues[index] = value == '' ? null : value;
+      for (var j = index + 1; j < 5; j++) {
+        locationValues[j] = null;
+        locations[j] = [];
+      }
+      locationError = null;
+      retryLocations = null;
+    });
+    await loadLocationChild(index);
+  }
+
+  Future<void> loadLocationChild(int index) async {
+    final version = ++locationVersion;
+    final value = locationValues[index];
+    if (value == null ||
+        index == 4 ||
+        (index == 3 && !value.startsWith('union_'))) {
+      if (mounted) setState(() => locationBusy = false);
+      return;
+    }
+    setState(() {
+      locationBusy = true;
+      locationError = null;
+    });
+    try {
+      final parent = index == 3 ? value.substring(6) : value;
+      final uri =
+          Uri.parse('${ApiConfig.membershipAuthUrl}/registration/locations')
+              .replace(queryParameters: {
+        'level': ['districts', 'upazilas', 'areas', 'villages'][index],
+        'parent_id': parent
+      });
+      final response = await AuthService.client.get(uri, headers: {
+        'Accept': 'application/json',
+        'Accept-Language': language
+      }).timeout(const Duration(seconds: 30));
+      final result = jsonDecode(response.body);
+      if (response.statusCode != 200 || result['success'] != true)
+        throw StateError('Locations unavailable');
+      if (!mounted || version != locationVersion) return;
+      setState(() => locations[index + 1] =
+          List<Map<String, dynamic>>.from(result['data']));
+    } catch (_) {
+      if (mounted && version == locationVersion)
+        setState(() {
+          locationError = tr(
+              'Unable to load address options.', 'ঠিকানার তালিকা লোড হয়নি।');
+          retryLocations = () => loadLocationChild(index);
+        });
+    } finally {
+      if (mounted && version == locationVersion)
+        setState(() => locationBusy = false);
+    }
+  }
+
+  Widget locationField(int index) {
+    final labels = [
+      tr('Division', 'বিভাগ'),
+      tr('District', 'জেলা'),
+      tr('Upazila', 'উপজেলা'),
+      tr('Pourashava / Union (Optional)', 'পৌরসভা / ইউনিয়ন (ঐচ্ছিক)'),
+      tr('Village / Road (Optional)', 'গ্রাম / রাস্তা (ঐচ্ছিক)')
+    ];
+    return Padding(
+        key: Key('registration-location-$index'),
+        padding: const EdgeInsets.only(bottom: 16),
+        child: DropdownButtonFormField<String>(
+          key: ValueKey(
+              'location-$index-${locationValues.take(index).join('-')}'),
+          initialValue: locationValues[index],
+          isExpanded: true,
+          decoration: InputDecoration(
+              labelText: labels[index], border: const OutlineInputBorder()),
+          items: [
+            if (index >= 3)
+              DropdownMenuItem(
+                  value: '',
+                  child: Text(tr('Not selected', 'নির্বাচন করা হয়নি'))),
+            ...locations[index].map((row) => DropdownMenuItem(
+                value: (row['value'] ?? row['id']).toString(),
+                child: Text(
+                    (widget.state.bengali &&
+                                (row['bn_name']?.toString().trim().isNotEmpty ??
+                                    false)
+                            ? row['bn_name']
+                            : row['name'])
+                        .toString(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis)))
+          ],
+          onChanged: busy || locationBusy || locations[index].isEmpty
+              ? null
+              : (value) => chooseLocation(index, value),
+          validator: index < 3
+              ? (value) => value == null
+                  ? tr('Select your ${labels[index].toLowerCase()}.',
+                      '${labels[index]} নির্বাচন করুন।')
+                  : null
+              : null,
+        ));
   }
 
   void startTimer() {
@@ -138,6 +252,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           'mobile_no': AuthService.normalizeMobile(mobile.text),
           'email': email.text.trim().isEmpty ? null : email.text.trim(),
           'branch_id': branch,
+          'division_id': int.tryParse(locationValues[0] ?? ''),
+          'district_id': int.tryParse(locationValues[1] ?? ''),
+          'upazila_id': int.tryParse(locationValues[2] ?? ''),
+          'union_id': locationValues[3]?.startsWith('union_') == true
+              ? int.parse(locationValues[3]!.substring(6))
+              : null,
+          'pourashava_id': locationValues[3]?.startsWith('pourashava_') == true
+              ? int.parse(locationValues[3]!.substring(11))
+              : null,
+          'village_id': int.tryParse(locationValues[4] ?? ''),
+          'address': address.text.trim().isEmpty ? null : address.text.trim(),
           'password': password.text,
           'password_confirmation': confirmation.text,
           'terms_accepted': consent,
@@ -221,6 +346,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       {bool secret = false,
       bool digits = false,
       int? length,
+      int lines = 1,
       TextInputType? keyboard,
       String? Function(String)? validate}) {
     return Padding(
@@ -229,6 +355,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           key: Key(keyName),
           controller: controller,
           enabled: !busy,
+          maxLines: secret ? 1 : lines,
           obscureText: secret && !showPassword,
           keyboardType: digits ? TextInputType.number : keyboard,
           inputFormatters: digits
@@ -322,6 +449,29 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                         'শাখা নির্বাচন করুন।')
                                     : null,
                               )),
+                        Text(tr('Address Information', 'ঠিকানার তথ্য'),
+                            style: const TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 16),
+                        for (var index = 0; index < 5; index++)
+                          locationField(index),
+                        if (locationBusy) const LinearProgressIndicator(),
+                        if (locationError != null)
+                          TextButton(
+                              onPressed: retryLocations,
+                              child: Text(
+                                  '$locationError ${tr('Retry', 'আবার চেষ্টা করুন')}')),
+                        input(
+                            'registration-address',
+                            tr('Address details (Optional)',
+                                'বিস্তারিত ঠিকানা (ঐচ্ছিক)'),
+                            address,
+                            lines: 3,
+                            keyboard: TextInputType.multiline,
+                            validate: (value) => value.length > 500
+                                ? tr('Use up to 500 characters.',
+                                    'সর্বোচ্চ ৫০০ অক্ষর লিখুন।')
+                                : null),
                         Padding(
                           padding: const EdgeInsets.only(bottom: 16),
                           child: DropdownButtonFormField<String>(
@@ -453,7 +603,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                   ? tr('Verify OTP', 'ওটিপি যাচাই করুন')
                                   : tr('Complete Registration',
                                       'নিবন্ধন সম্পন্ন করুন'),
-                          busy || loading || (step == 0 && branches.isEmpty)
+                          busy ||
+                                  loading ||
+                                  locationBusy ||
+                                  (step == 0 && branches.isEmpty)
                               ? null
                               : submit,
                           busy: busy),

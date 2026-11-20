@@ -16,15 +16,38 @@ void main() {
   testWidgets(
       'Registration explains website password, verifies OTP, then submits matching app PIN',
       (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     final posts = <String, Map<String, dynamic>>{};
     final previous = AuthService.client;
     AuthService.client = MockClient((request) async {
       final path = request.url.path;
+      if (path.endsWith('/locations')) {
+        final level = request.url.queryParameters['level'];
+        return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': [
+                if (level == 'districts') {'id': 2, 'name': 'Test District'},
+                if (level == 'upazilas') {'id': 3, 'name': 'Test Upazila'},
+                if (level == 'areas')
+                  {'id': 4, 'value': 'union_4', 'name': 'Test Union'},
+                if (level == 'villages') {'id': 5, 'name': 'Test Village'},
+              ]
+            }),
+            200);
+      }
       if (request.method == 'GET')
         return http.Response(
             jsonEncode({
               'success': true,
               'data': {
+                'divisions': [
+                  {'id': 1, 'name': 'Test Division'},
+                  {'id': 6, 'name': 'Other Division'}
+                ],
                 'branches': [
                   {'id': 1, 'name': 'Test Branch', 'code': 'TB'}
                 ]
@@ -79,6 +102,52 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('TB Test Branch').last);
     await tester.pumpAndSettle();
+    for (var index = 0; index < 5; index++) {
+      final field = find.byKey(Key('registration-location-$index'));
+      await tester.ensureVisible(field);
+      await tester.tap(field);
+      await tester.pumpAndSettle();
+      await tester.tap(find
+          .text([
+            'Test Division',
+            'Test District',
+            'Test Upazila',
+            'Test Union',
+            'Test Village'
+          ][index])
+          .last);
+      await tester.pumpAndSettle();
+    }
+    final divisionField = find.byKey(const Key('registration-location-0'));
+    await tester.ensureVisible(divisionField);
+    await tester.tap(divisionField);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Other Division').last);
+    await tester.pumpAndSettle();
+    for (var index = 1; index < 5; index++) {
+      final dropdown = tester.widget<DropdownButtonFormField<String>>(
+          find.descendant(
+              of: find.byKey(Key('registration-location-$index')),
+              matching: find.byType(DropdownButtonFormField<String>)));
+      expect(dropdown.initialValue, isNull);
+    }
+    for (var index = 0; index < 5; index++) {
+      final field = find.byKey(Key('registration-location-$index'));
+      await tester.ensureVisible(field);
+      await tester.tap(field);
+      await tester.pumpAndSettle();
+      await tester.tap(find
+          .text([
+            'Test Division',
+            'Test District',
+            'Test Upazila',
+            'Test Union',
+            'Test Village'
+          ][index])
+          .last);
+      await tester.pumpAndSettle();
+    }
+    await enter('registration-address', 'House 10, Road 2');
     await tester
         .ensureVisible(find.byKey(const Key('registration-referral-type')));
     await tester.tap(find.byKey(const Key('registration-referral-type')));
@@ -97,6 +166,12 @@ void main() {
         posts.entries.firstWhere((e) => e.key.endsWith('/initiate')).value;
     expect(initiated['mobile_no'], '01712345678');
     expect(initiated['password'], 'website-pass-42');
+    expect(initiated['division_id'], 1);
+    expect(initiated['district_id'], 2);
+    expect(initiated['upazila_id'], 3);
+    expect(initiated['union_id'], 4);
+    expect(initiated['village_id'], 5);
+    expect(initiated['address'], 'House 10, Road 2');
     expect(initiated['referral_type'], 'agent');
     expect(initiated['referral_code'], '10100001');
     expect(initiated.containsKey('pin'), false);
