@@ -9,6 +9,7 @@ import 'legal_copy.dart';
 import 'member_card.dart';
 import 'profile_setup.dart';
 import 'referrals.dart';
+import 'services/biometric_service.dart';
 
 class ProfileScreen extends StatelessWidget {
   final ToriState state;
@@ -356,14 +357,32 @@ Future<void> showSecurity(BuildContext context, ToriState s) async =>
                   size: 11,
                   color: p.muted),
               secondary: Icon(Icons.shield_outlined, color: p.primary)),
-          SwitchListTile(
-              value: s.biometric,
-              onChanged: s.setBiometric,
-              title: text(s.tr('Biometric Login', 'বায়োমেট্রিক লগইন'),
-                  color: p.ink),
-              subtitle: text('Face ID & Fingerprint authentication',
-                  size: 11, color: p.muted),
-              secondary: Icon(Icons.fingerprint, color: p.primary)),
+          FutureBuilder<bool>(
+            future: BiometricService.enabled(s.profile.mobileNumber),
+            builder: (context, snapshot) => SwitchListTile(
+              value: snapshot.data ?? false,
+              onChanged: (enable) async {
+                String? pin;
+                if (enable) {
+                  pin = await showDialog<String>(context: ctx, builder: (dialogContext) {
+                    String value = '';
+                    return AlertDialog(title: const Text('Enable fingerprint login'),
+                      content: TextField(obscureText: true, keyboardType: TextInputType.number, maxLength: 6,
+                        onChanged: (text) => value = text, decoration: const InputDecoration(labelText: 'Current 6-digit PIN')),
+                      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+                        TextButton(onPressed: () => Navigator.pop(dialogContext, value), child: const Text('Continue'))]);
+                  });
+                  if (pin == null) return;
+                }
+                try {
+                  await BiometricService.configure(s.profile.mobileNumber, enable, pin: pin);
+                  s.setBiometric(enable);
+                  if (ctx.mounted) toast(ctx, enable ? 'Fingerprint login enabled' : 'Fingerprint login disabled');
+                } catch (e) { if (ctx.mounted) toast(ctx, e.toString().replaceFirst('Exception: ', '')); }
+              },
+              title: text(s.tr('Biometric Login', 'বায়োমেট্রিক লগইন'), color: p.ink),
+              subtitle: text('Fingerprint login on this device', size: 11, color: p.muted),
+              secondary: Icon(Icons.fingerprint, color: p.primary))),
           profileRow(s.tr('Transaction PIN', 'ট্রানজেকশন পিন'),
               Icons.pin_outlined, p, () => showChangePin(ctx, s),
               subtitle: s.tr('Change your 6-digit security PIN',

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'services/auth_service.dart';
+import 'services/biometric_service.dart';
 import 'registration.dart';
 import 'state.dart';
 import 'ui.dart';
@@ -132,6 +133,22 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     }
   }
 
+  Future<void> submitBiometric() async {
+    if (busy) return;
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    final result =
+        await BiometricService.login(mobile.text, s.bengali ? 'bn' : 'en');
+    if (!mounted) return;
+    setState(() {
+      busy = false;
+      error = result['success'] == true ? null : result['message'];
+    });
+    if (result['success'] == true) s.login();
+  }
+
   Future<void> submitPin() async {
     if (busy) return;
     setState(() {
@@ -162,6 +179,38 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     if (!mounted) return;
     setState(() => busy = false);
     if (result['success'] == true) {
+      if (!hasPin && await BiometricService.supported()) {
+        await BiometricService.forget(mobile.text);
+      }
+      if (await BiometricService.supported() &&
+          !await BiometricService.enabled(mobile.text) &&
+          mounted) {
+        final enable = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+                    title: Text(tr('Enable fingerprint login?',
+                        'ফিঙ্গারপ্রিন্ট লগইন চালু করবেন?')),
+                    content: Text(tr(
+                        'Sign in faster on this phone using your fingerprint.',
+                        'এই ফোনে ফিঙ্গারপ্রিন্ট দিয়ে দ্রুত লগইন করুন।')),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: Text(tr('Later', 'পরে'))),
+                      TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: Text(tr('Enable', 'চালু করুন')))
+                    ]));
+        if (enable == true) {
+          try {
+            await BiometricService.configure(mobile.text, true, pin: pin.text);
+          } catch (e) {
+            if (mounted)
+              toast(context, e.toString().replaceFirst('Exception: ', ''));
+          }
+        }
+      }
+      if (!mounted) return;
       s.login();
     } else if (result['otp_required'] == true) {
       await continueMobile();
@@ -287,7 +336,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                           top: 24, bottom: 8),
                                       child: Wrap(
                                         alignment: WrapAlignment.center,
-                                        crossAxisAlignment: WrapCrossAlignment.center,
+                                        crossAxisAlignment:
+                                            WrapCrossAlignment.center,
                                         children: [
                                           Icon(Icons.shield_outlined,
                                               size: 13,
@@ -379,41 +429,41 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               gradient: true, busy: busy, icon: Icons.arrow_forward_rounded),
           gap(4),
           Center(
-            child: disabledFeature(InkWell(
+            child: InkWell(
                 borderRadius: BorderRadius.circular(10),
-                onTap: () {
-                  toast(
-                      context,
-                      tr('Biometric authenticated for +880 ${mobile.text}',
-                          'বায়োমেট্রিক অথেন্টিকেশন সফল হয়েছে'));
-                  go(AuthStep.otp);
-                },
+                onTap: submitBiometric,
                 child: Padding(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    child: Wrap(alignment: WrapAlignment.center, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                      const Icon(Icons.fingerprint_rounded,
-                          size: 20, color: Color(0xFF0D9488)),
-                      hgap(8),
-                      text(
-                          tr('Use Biometric Login',
-                              'বায়োমেট্রিক দিয়ে লগইন করুন'),
-                          size: 13,
-                          weight: FontWeight.w600,
-                          color: const Color(0xFF0D9488))
-                    ])))),
+                    child: Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          const Icon(Icons.fingerprint_rounded,
+                              size: 20, color: Color(0xFF0D9488)),
+                          hgap(8),
+                          text(
+                              tr('Use Biometric Login',
+                                  'বায়োমেট্রিক দিয়ে লগইন করুন'),
+                              size: 13,
+                              weight: FontWeight.w600,
+                              color: const Color(0xFF0D9488))
+                        ]))),
           )
         ])),
         gap(20),
-        Wrap(alignment: WrapAlignment.center, crossAxisAlignment: WrapCrossAlignment.center, children: [
-          text(tr("Don't have an account? ", 'অ্যাকাউন্ট নেই? '),
-              size: 13.5, color: p.muted),
-          link(
-              tr('Register Now', 'নিবন্ধন করুন'),
-              () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => RegistrationScreen(state: s))),
-              size: 13.5)
-        ]),
+        Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              text(tr("Don't have an account? ", 'অ্যাকাউন্ট নেই? '),
+                  size: 13.5, color: p.muted),
+              link(
+                  tr('Register Now', 'নিবন্ধন করুন'),
+                  () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => RegistrationScreen(state: s))),
+                  size: 13.5)
+            ]),
         gap(10),
         link(tr('Need Help? Contact Support', 'সাহায্য প্রয়োজন? যোগাযোগ করুন'),
             null,
@@ -555,7 +605,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               child: text(tr('OR INSTANT ACCESS', 'অথবা তাৎক্ষণিক প্রবেশ'),
                   size: 10, color: p.muted, spacing: 1.2)),
           InkWell(
-              onTap: submitPin,
+              onTap: submitBiometric,
               child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Row(
