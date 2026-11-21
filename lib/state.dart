@@ -191,6 +191,9 @@ class ToriState extends ChangeNotifier {
         address: data['address'] ?? '',
         photoUrl: data['image'] ?? '',
         mfiId: data['member_no'] ?? '',
+        mfiBranch: data['registration_branch'] is Map
+            ? (data['registration_branch']['name'] ?? '').toString()
+            : '',
         isVerified: data['is_verified'] == true,
         kycStatus: details['status'] ?? 'Not submitted');
     kyc = KycDetails(

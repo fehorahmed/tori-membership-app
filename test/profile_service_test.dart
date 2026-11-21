@@ -23,6 +23,7 @@ void main() {
       'success': true,
       'data': {
         'name': 'New Member', 'member_no': '10100042',
+        'registration_branch': {'id': 1, 'code': '101', 'name': 'Head Office'},
         'referred_by': {'type': 'agent', 'name': 'Referring Agent', 'code': '10100001'},
         'kyc': {'status': 'Not submitted'}
       }
@@ -30,10 +31,13 @@ void main() {
     addTearDown(service.close);
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: ProfileDetailsPage(state: state, service: service))));
     await tester.pumpAndSettle();
+    expect(find.text('Registration branch'), findsOneWidget);
+    expect(find.text('Head Office'), findsOneWidget);
     expect(find.text('Your Referral ID'), findsOneWidget);
     expect(find.text('10100042'), findsOneWidget);
     expect(find.text('Referring Agent (Agent) · 10100001'), findsOneWidget);
     state.applyMemberProfile({'name': 'No referral member'});
+    expect(state.profile.mfiBranch, isEmpty);
     expect(state.referredBy, isNull);
     expect(state.referrerDescription, 'No referral recorded');
   });

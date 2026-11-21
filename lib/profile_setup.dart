@@ -102,6 +102,8 @@ class _ProfileDetailsPageState extends State<ProfileDetailsPage> {
       if (loaded) ...[
         infoRow(
             s.tr('Mobile number', 'মোবাইল নম্বর'), s.profile.mobileNumber, p),
+        infoRow(s.tr('Registration branch', 'নিবন্ধনের শাখা'),
+            s.profile.mfiBranch.isEmpty ? s.tr('Not assigned', 'দেওয়া হয়নি') : s.profile.mfiBranch, p),
         infoRow(s.tr('Your Referral ID', 'আপনার রেফারেল আইডি'), s.profile.mfiId.isEmpty ? s.tr('Not assigned', 'দেওয়া হয়নি') : s.profile.mfiId, p),
         infoRow(s.tr('Referred by', 'যাঁর রেফারেন্সে নিবন্ধন করেছেন'), s.referrerDescription, p),
         if (['Pending', 'Verified'].contains(s.kyc.status)) ...[
