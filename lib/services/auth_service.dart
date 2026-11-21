@@ -29,6 +29,10 @@ class ApiConfig {
 class AuthService {
   static http.Client client = http.Client();
   static const deviceIdKey = 'membership_installation_id';
+  static const lastMobileKey = 'membership_last_login_mobile';
+
+  static Future<String?> lastLoginMobile() async =>
+      (await SharedPreferences.getInstance()).getString(lastMobileKey);
 
   static String normalizeMobile(String raw) {
     final mobile = raw.replaceAll(RegExp(r'[^0-9]'), '');
@@ -95,8 +99,10 @@ class AuthService {
     if (result['success'] != true) return;
     final prefs = await SharedPreferences.getInstance();
     final data = result['data'];
-    if (data['token'] != null)
+    if (data['token'] != null) {
       await prefs.setString(ApiConfig.tokenKey, data['token']);
+      await prefs.setString(lastMobileKey, normalizeMobile(mobile));
+    }
     if (data['device_token'] != null)
       await prefs.setString(trustedKey(mobile), data['device_token']);
   }

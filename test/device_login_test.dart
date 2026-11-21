@@ -15,6 +15,24 @@ void main() {
     AuthService.client = http.Client();
   });
 
+  testWidgets('Successful login remembers number on the next login screen',
+      (tester) async {
+    expect(await AuthService.lastLoginMobile(), isNull);
+    await AuthService.saveLogin({
+      'success': true,
+      'data': {'token': 'session'}
+    }, '01712345678');
+    await AuthService.saveLogin({'success': false}, '01999999999');
+    expect(await AuthService.lastLoginMobile(), '01712345678');
+    await tester
+        .pumpWidget(MaterialApp(home: WelcomeScreen(state: ToriState())));
+    await tester.pumpAndSettle();
+    expect(find.text('1712345678'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).first, '1912345678');
+    expect(find.text('1912345678'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   test(
       'Installation ID persists and device proof is scoped to the normalized phone',
       () async {

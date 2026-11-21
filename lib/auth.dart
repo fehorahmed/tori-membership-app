@@ -33,6 +33,22 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   Palette get p => Palette(s.dark);
   String tr(String a, String b) => s.tr(a, b);
   @override
+  void initState() {
+    super.initState();
+    restoreLastMobile();
+  }
+
+  Future<void> restoreLastMobile() async {
+    final saved = await AuthService.lastLoginMobile();
+    if (!mounted || mobile.text.isNotEmpty || saved == null) return;
+    final normalized = AuthService.normalizeMobile(saved);
+    setState(() {
+      mobile.text =
+          normalized.startsWith('0') ? normalized.substring(1) : normalized;
+    });
+  }
+
+  @override
   void dispose() {
     timer?.cancel();
     for (final c in [mobile, pin, confirmPin, otp]) {
