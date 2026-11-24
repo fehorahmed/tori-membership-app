@@ -3,6 +3,7 @@ import 'referrals.dart' show showReferrals;
 import 'quick_send.dart';
 import 'send_money.dart';
 import 'cashout.dart';
+import 'fdr.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -168,7 +169,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           s.tr('My Card', 'আমার কার্ড'),
                           s.tr('Passbook', 'পাসবুক'),
                           s.tr('Statement', 'স্টেটমেন্ট'),
-                          s.tr('Referral Points', 'রেফারেল পয়েন্ট')];
+                          s.tr('Referral Points', 'রেফারেল পয়েন্ট'), s.tr('FDR', 'এফডিআর')];
                         final actions = <VoidCallback>[
                           () => showSendMoney(context, s),
                           () => showCashout(context, s),
@@ -176,6 +177,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           () => showStatement(context, s),
                           () => showStatement(context, s),
                           () => showReferrals(context, s),
+                          () => showFdr(context, s),
                         ];
                         final cardWidth = (constraints.maxWidth - (columns - 1) * 12) / columns;
                         final labelHeight = labels.fold<double>(0, (height, label) {
@@ -200,7 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             label: labels[i],
                             icon: const [Icons.send_outlined, Icons.qr_code_scanner,
                               Icons.credit_card_outlined, Icons.description_outlined,
-                              Icons.receipt_long_outlined, Icons.stars_outlined][i],
+                              Icons.receipt_long_outlined, Icons.stars_outlined, Icons.account_balance_outlined][i],
                             color: p.primary, p: p, onTap: actions[i]),
                         );
                       }),

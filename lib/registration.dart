@@ -486,7 +486,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                   child: Text(tr('Member', 'মেম্বার'))),
                               DropdownMenuItem(
                                   value: 'agent',
-                                  child: Text(tr('Agent', 'এজেন্ট'))),
+                                  child: Text(tr('Employee', 'কর্মচারী'))),
                             ],
                             onChanged: busy
                                 ? null
@@ -504,8 +504,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                             referralType == 'member'
                                 ? tr('Member Code (Optional)',
                                     'মেম্বার কোড (ঐচ্ছিক)')
-                                : tr('Agent Username / Code (Optional)',
-                                    'এজেন্ট ইউজারনেম / কোড (ঐচ্ছিক)'),
+                                : tr('Employee Username / Code (Optional)',
+                                    'কর্মচারীর ইউজারনেম / কোড (ঐচ্ছিক)'),
                             referral),
                         input(
                             'registration-password',

@@ -4,6 +4,7 @@ import 'state.dart';
 import 'ui.dart';
 import 'dashboard.dart';
 import 'dialogs.dart';
+import 'fdr.dart';
 
 class AccountsScreen extends StatelessWidget {
   final ToriState state;
@@ -161,7 +162,7 @@ class AccountsScreen extends StatelessWidget {
                                         case 3:
                                           showStatement(context, s);
                                         case 4:
-                                          showOpenDeposit(context, s);
+                                          showFdr(context, s);
                                         case 5:
                                           showQrScanner(context, s);
                                       }
@@ -210,9 +211,9 @@ class AccountsScreen extends StatelessWidget {
                     ]),
                     color: p.error.withValues(alpha: .06)),
                 secondary(
-                    s.tr('+ Open New DPS or FDR Account',
-                        '+ নতুন ডিপিএস বা এফডিআর খুলুন'),
-                    () => showOpenDeposit(context, s),
+                    s.tr('+ Open or manage FDR',
+                        '+ এফডিআর খুলুন বা দেখুন'),
+                    () => showFdr(context, s),
                     p),
               ])))
     ]);

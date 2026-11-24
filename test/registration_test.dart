@@ -152,7 +152,7 @@ void main() {
         .ensureVisible(find.byKey(const Key('registration-referral-type')));
     await tester.tap(find.byKey(const Key('registration-referral-type')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Agent').last);
+    await tester.tap(find.text('Employee').last);
     await tester.pumpAndSettle();
     await enter('registration-referral', '10100001');
     await enter('registration-password', 'website-pass-42');

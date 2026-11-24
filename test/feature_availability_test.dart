@@ -6,7 +6,7 @@ import 'package:tori_mfi_bank/profile.dart';
 import 'package:tori_mfi_bank/state.dart';
 
 void main() {
-  testWidgets('Home displays six connected service cards', (tester) async {
+  testWidgets('Home displays seven connected service cards including FDR', (tester) async {
     await tester.pumpWidget(
         MaterialApp(home: Scaffold(body: HomeScreen(state: ToriState()))));
     final tiles =
@@ -15,7 +15,7 @@ void main() {
     expect(tiles[1].enabled, true);
     expect(tiles[1].label, 'Branch Cash-out');
     expect(tiles[2].enabled, true);
-    expect(tiles.length, 6);
+    expect(tiles.length, 7);
     expect(tiles.every((tile) => tile.enabled), true);
     expect(tiles.map((tile) => tile.label), containsAll(['My Card', 'Referral Points', 'Statement']));
   });
