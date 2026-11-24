@@ -41,6 +41,53 @@ void main() {
     expect(keys[0], keys[1]);
     expect(await service.pending(1), isNull);
   });
+  test('Agent retry storage and API paths are separate from Send Money',
+      () async {
+    final paths = <String>[];
+    final service =
+        AgentMoneyService('agent_cashin', client: MockClient((r) async {
+      paths.add(r.url.path);
+      throw http.ClientException('lost response');
+    }));
+    addTearDown(service.close);
+    final result =
+        await service.create(10, {'quote': 'agent-signed'}, '123456', 'en');
+    expect(result['uncertain'], true);
+    expect(paths.single.endsWith('/agent/agent_cashin'), true);
+    final saved = await service.pending(10);
+    expect(saved, isNotNull);
+    expect(jsonEncode(saved), isNot(contains('123456')));
+    final ordinary = SendMoneyService();
+    expect(await ordinary.pending(10), isNull);
+    ordinary.close();
+  });
+  testWidgets('Closing hours show reopening time and hide the review form',
+      (tester) async {
+    final service = SendMoneyService(
+        client: MockClient((r) async => http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {
+                'customer_id': 10,
+                'enabled': false,
+                'available_balance': '1000.00',
+                'transfers': [],
+                'transaction_window': {
+                  'blocked': true,
+                  'message': 'Closed until 10:00 PM Bangladesh time'
+                }
+              }
+            }),
+            200)));
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: SendMoneyPage(state: ToriState(), service: service))));
+    await tester.pumpAndSettle();
+    expect(find.text('Closed until 10:00 PM Bangladesh time'), findsOneWidget);
+    expect(find.text('Review transfer'), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    service.close();
+  });
   testWidgets('Review recipient and fees, cancel confirmation, then send once',
       (tester) async {
     tester.view.physicalSize = const Size(320, 800);

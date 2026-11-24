@@ -107,29 +107,58 @@ class _HomeScreenState extends State<HomeScreen> {
                                           child: Container(
                                               width: 160,
                                               height: 28,
-                                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 10),
                                               decoration: BoxDecoration(
                                                   color: p.surface,
-                                                  border: Border.all(color: p.border),
-                                                  borderRadius: BorderRadius.circular(100)),
+                                                  border: Border.all(
+                                                      color: p.border),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          100)),
                                               child: Row(children: [
                                                 CircleAvatar(
                                                     radius: 9,
-                                                    backgroundColor: const Color(0xFFE11D48),
-                                                    child: text('৳', size: 11, color: Colors.white)),
+                                                    backgroundColor:
+                                                        const Color(0xFFE11D48),
+                                                    child: text('৳',
+                                                        size: 11,
+                                                        color: Colors.white)),
                                                 hgap(6),
                                                 Expanded(
                                                   child: AnimatedSwitcher(
-                                                    duration: const Duration(milliseconds: 300),
+                                                    duration: const Duration(
+                                                        milliseconds: 300),
                                                     child: SizedBox(
-                                                      key: ValueKey<bool>(revealed),
+                                                      key: ValueKey<bool>(
+                                                          revealed),
                                                       width: double.infinity,
                                                       child: FittedBox(
                                                         fit: BoxFit.scaleDown,
-                                                        alignment: Alignment.centerLeft,
+                                                        alignment: Alignment
+                                                            .centerLeft,
                                                         child: text(
-                                                          revealed ? (s.dashboardBalanceLoaded ? s.money(s.balance) : s.dashboardLoading ? s.tr('Loading…', 'লোড হচ্ছে…') : s.tr('Unavailable', 'পাওয়া যায়নি')) : s.tr('Tap for Balance', 'ব্যালেন্স দেখুন'),
-                                                          size: 12, color: p.ink, weight: FontWeight.w600),
+                                                            revealed
+                                                                ? (s
+                                                                        .dashboardBalanceLoaded
+                                                                    ? s.money(s
+                                                                        .balance)
+                                                                    : s
+                                                                            .dashboardLoading
+                                                                        ? s.tr(
+                                                                            'Loading…',
+                                                                            'লোড হচ্ছে…')
+                                                                        : s.tr(
+                                                                            'Unavailable',
+                                                                            'পাওয়া যায়নি'))
+                                                                : s.tr(
+                                                                    'Tap for Balance',
+                                                                    'ব্যালেন্স দেখুন'),
+                                                            size: 12,
+                                                            color: p.ink,
+                                                            weight: FontWeight
+                                                                .w600),
                                                       ),
                                                     ),
                                                   ),
@@ -164,50 +193,84 @@ class _HomeScreenState extends State<HomeScreen> {
                       LayoutBuilder(builder: (context, constraints) {
                         final columns = constraints.maxWidth < 330 ? 2 : 3;
                         final scaler = MediaQuery.textScalerOf(context);
-                        final labels = [s.tr('Send Money', 'সেন্ড মানি'),
+                        final labels = [
+                          s.isAgent
+                              ? s.tr('Member Cash-in', 'মেম্বার ক্যাশ ইন')
+                              : s.tr('Send Money', 'সেন্ড মানি'),
                           s.tr('Branch Cash-out', 'ব্রাঞ্চ ক্যাশ আউট'),
                           s.tr('My Card', 'আমার কার্ড'),
                           s.tr('Passbook', 'পাসবুক'),
                           s.tr('Statement', 'স্টেটমেন্ট'),
-                          s.tr('Referral Points', 'রেফারেল পয়েন্ট'), s.tr('FDR', 'এফডিআর')];
+                          s.tr('Referral Points', 'রেফারেল পয়েন্ট'),
+                          s.tr('FDR', 'এফডিআর'),
+                          if (!s.isAgent)
+                            s.tr('Agent Cash-out', 'এজেন্ট ক্যাশ আউট')
+                        ];
                         final actions = <VoidCallback>[
-                          () => showSendMoney(context, s),
+                          () => s.isAgent
+                              ? showAgentMoney(context, s, 'agent_cashin')
+                              : showSendMoney(context, s),
                           () => showCashout(context, s),
                           () => showCard(context, s),
                           () => showStatement(context, s),
                           () => showStatement(context, s),
                           () => showReferrals(context, s),
                           () => showFdr(context, s),
+                          if (!s.isAgent)
+                            () => showAgentMoney(context, s, 'agent_cashout'),
                         ];
-                        final cardWidth = (constraints.maxWidth - (columns - 1) * 12) / columns;
-                        final labelHeight = labels.fold<double>(0, (height, label) {
+                        final cardWidth =
+                            (constraints.maxWidth - (columns - 1) * 12) /
+                                columns;
+                        final labelHeight =
+                            labels.fold<double>(0, (height, label) {
                           final painter = TextPainter(
-                            text: TextSpan(text: label, style: font(13, color: p.ink, weight: FontWeight.w600).copyWith(height: 1.35)),
-                            textDirection: Directionality.of(context), textScaler: scaler,
-                            maxLines: 3)..layout(maxWidth: cardWidth - 24);
-                          return painter.height > height ? painter.height : height;
+                              text: TextSpan(
+                                  text: label,
+                                  style: font(13,
+                                          color: p.ink, weight: FontWeight.w600)
+                                      .copyWith(height: 1.35)),
+                              textDirection: Directionality.of(context),
+                              textScaler: scaler,
+                              maxLines: 3)
+                            ..layout(maxWidth: cardWidth - 24);
+                          return painter.height > height
+                              ? painter.height
+                              : height;
                         });
-                        final cardHeight = (40 + 10 + labelHeight + 36).clamp(118.0, double.infinity);
+                        final cardHeight = (40 + 10 + labelHeight + 36)
+                            .clamp(118.0, double.infinity);
                         return GridView.builder(
                           key: const Key('home-service-grid'),
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           padding: EdgeInsets.zero,
                           itemCount: labels.length,
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: columns,
-                            crossAxisSpacing: 12, mainAxisSpacing: 12,
-                            mainAxisExtent: cardHeight),
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: columns,
+                                  crossAxisSpacing: 12,
+                                  mainAxisSpacing: 12,
+                                  mainAxisExtent: cardHeight),
                           itemBuilder: (_, i) => ServiceTile(
-                            label: labels[i],
-                            icon: const [Icons.send_outlined, Icons.qr_code_scanner,
-                              Icons.credit_card_outlined, Icons.description_outlined,
-                              Icons.receipt_long_outlined, Icons.stars_outlined, Icons.account_balance_outlined][i],
-                            color: p.primary, p: p, onTap: actions[i]),
+                              label: labels[i],
+                              icon: const [
+                                Icons.send_outlined,
+                                Icons.qr_code_scanner,
+                                Icons.credit_card_outlined,
+                                Icons.description_outlined,
+                                Icons.receipt_long_outlined,
+                                Icons.stars_outlined,
+                                Icons.account_balance_outlined,
+                                Icons.point_of_sale_outlined
+                              ][i],
+                              color: p.primary,
+                              p: p,
+                              onTap: actions[i]),
                         );
                       }),
                       gap(20),
-                      QuickSendPanel(state: s),
+                      if (!s.isAgent) QuickSendPanel(state: s),
                       CashFlowCard(
                           state: s,
                           onSeeAll: () => s.navigate(AppNavTab.PAYMENTS)),
@@ -299,29 +362,53 @@ class ServiceTile extends StatelessWidget {
       opacity: enabled ? 1 : .4,
       child: Container(
         decoration: BoxDecoration(
-          color: p.surface,
-          borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-            colors: [p.surface, Color.alphaBlend(color.withValues(alpha: .045), p.surface)]),
-          border: Border.all(color: color.withValues(alpha: .12)),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? .18 : .07),
-            blurRadius: 12, offset: const Offset(0, 4))]),
+            color: p.surface,
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  p.surface,
+                  Color.alphaBlend(color.withValues(alpha: .045), p.surface)
+                ]),
+            border: Border.all(color: color.withValues(alpha: .12)),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withValues(
+                      alpha: Theme.of(context).brightness == Brightness.dark
+                          ? .18
+                          : .07),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4))
+            ]),
         child: Material(
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           clipBehavior: Clip.antiAlias,
-          child: InkWell(onTap: enabled ? onTap : null,
-            child: Padding(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Container(width: 40, height: 40,
-                  decoration: BoxDecoration(color: color.withValues(alpha: .09),
-                    borderRadius: BorderRadius.circular(13)),
-                  child: Icon(icon, color: color, size: 25)),
-                const SizedBox(height: 10),
-                Text(label, textAlign: TextAlign.center, maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: font(13, color: p.ink, weight: FontWeight.w600).copyWith(height: 1.35)),
-              ]))),
+          child: InkWell(
+              onTap: enabled ? onTap : null,
+              child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                  child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                                color: color.withValues(alpha: .09),
+                                borderRadius: BorderRadius.circular(13)),
+                            child: Icon(icon, color: color, size: 25)),
+                        const SizedBox(height: 10),
+                        Text(label,
+                            textAlign: TextAlign.center,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style:
+                                font(13, color: p.ink, weight: FontWeight.w600)
+                                    .copyWith(height: 1.35)),
+                      ]))),
         ),
       ));
 }

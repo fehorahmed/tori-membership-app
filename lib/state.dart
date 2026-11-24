@@ -115,6 +115,8 @@ class ToriState extends ChangeNotifier {
   String? dashboardError;
   int _memberEpoch = 0;
   int get memberEpoch => _memberEpoch;
+  Map<String, dynamic>? agent;
+  bool get isAgent => agent != null;
   bool memberProfileLoaded = false;
   bool kycReminderShown = false;
 
@@ -122,6 +124,7 @@ class ToriState extends ChangeNotifier {
     balance = 0;
     accounts = [];
     dashboardBalanceLoaded = false;
+    agent = null;
     cashFlows = {};
     profile = profile.copyWith(rewardPoints: 0);
     referredBy = null;
@@ -145,6 +148,7 @@ class ToriState extends ChangeNotifier {
     balance = 0;
     accounts = [];
     dashboardBalanceLoaded = false;
+    agent = null;
     cashFlows = {};
     referredBy = null;
     _memberEpoch++;
@@ -232,6 +236,9 @@ class ToriState extends ChangeNotifier {
     dashboardLoading = false;
     if (res['success'] == true && res['data'] != null) {
       final data = res['data'];
+      agent = data['agent'] is Map
+          ? Map<String, dynamic>.from(data['agent'])
+          : null;
       final cust = data['customer'];
       final summary = data['summary'];
       cashFlows = data['cash_flow'] is Map

@@ -199,7 +199,9 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
           Row(children: [
             Expanded(
                 child: hubAction(
-                    s.tr('Send Money', 'টাকা পাঠান'),
+                    s.isAgent
+                        ? s.tr('Member Cash-in', 'মেম্বার ক্যাশ ইন')
+                        : s.tr('Send Money', 'টাকা পাঠান'),
                     s.tr('Send to another member', 'অন্য মেম্বারকে টাকা পাঠান'),
                     Icons.send,
                     p.primary,
@@ -347,6 +349,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
   Widget _availableAction(String title, Widget child) {
     final enabled = title == s.tr('Branch Cash Out', 'শাখা থেকে ক্যাশ আউট') ||
         title == s.tr('Send Money', 'টাকা পাঠান') ||
+        title == s.tr('Member Cash-in', 'মেম্বার ক্যাশ ইন') ||
         title == s.tr('Statement', 'লেনদেন বিবরণ');
     return enabled ? child : disabledFeature(child);
   }
@@ -359,7 +362,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
             child: Column(children: [
               roundIcon(Icons.add, p, onTap: () => next(1), size: 48),
               gap(6),
-              text(s.tr('New Send', 'নতুন প্রাপক'), size: 10, color: p.muted, lines: 2)
+              text(s.tr('New Send', 'নতুন প্রাপক'),
+                  size: 10, color: p.muted, lines: 2)
             ])),
         for (final f in s.favorites)
           SizedBox(

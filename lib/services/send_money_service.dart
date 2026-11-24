@@ -7,7 +7,9 @@ import 'profile_service.dart';
 
 class SendMoneyService {
   final http.Client client;
-  SendMoneyService({http.Client? client}) : client = client ?? http.Client();
+  final String storageScope;
+  SendMoneyService({http.Client? client, this.storageScope = 'send_money'})
+      : client = client ?? http.Client();
   void close() => client.close();
 
   static String newKey() {
@@ -68,13 +70,13 @@ class SendMoneyService {
       });
   Future<Map<String, dynamic>?> pending(int customer) async {
     final prefs = await SharedPreferences.getInstance();
-    final value = prefs.getString('send_money_pending_$customer');
+    final value = prefs.getString('${storageScope}_pending_$customer');
     return value == null ? null : jsonDecode(value) as Map<String, dynamic>;
   }
 
   Future<void> clear(int customer) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('send_money_pending_$customer');
+    await prefs.remove('${storageScope}_pending_$customer');
   }
 
   Future<Map<String, dynamic>> create(int customer, Map<String, dynamic> quote,
@@ -92,7 +94,8 @@ class SendMoneyService {
     }
     final request = saved ?? {'quote_data': quote, 'key': newKey()};
     // Keep the same request key across timeouts/restarts. Never persist the PIN.
-    await prefs.setString('send_money_pending_$customer', jsonEncode(request));
+    await prefs.setString(
+        '${storageScope}_pending_$customer', jsonEncode(request));
     final result = await send('transfers', language, body: {
       'quote': request['quote_data']['quote'],
       'idempotency_key': request['key'],
@@ -102,4 +105,15 @@ class SendMoneyService {
       await clear(customer);
     return result;
   }
+}
+
+class AgentMoneyService extends SendMoneyService {
+  final String kind;
+  AgentMoneyService(this.kind, {super.client}) : super(storageScope: kind);
+
+  @override
+  Future<Map<String, dynamic>> send(String path, String language,
+          {Map<String, dynamic>? body}) =>
+      super.send(path.replaceFirst('transfers', 'agent/$kind'), language,
+          body: body);
 }

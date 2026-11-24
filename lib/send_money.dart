@@ -1,4 +1,5 @@
 import 'kyc_access.dart';
+import 'cashout.dart' show CashoutScanner;
 import 'services/beneficiary_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +10,11 @@ import 'services/send_money_service.dart';
 
 Future<void> showSendMoney(BuildContext context, ToriState state,
     {String? initialRecipient, int? recipientId}) async {
+  if (state.isAgent) {
+    await showAgentMoney(context, state, 'agent_cashin',
+        initialRecipient: initialRecipient, recipientId: recipientId);
+    return;
+  }
   await openPage<void>(
       context,
       state,
@@ -20,8 +26,25 @@ Future<void> showSendMoney(BuildContext context, ToriState state,
   await state.loadDashboardData();
 }
 
+Future<void> showAgentMoney(BuildContext context, ToriState state, String kind,
+    {String? initialRecipient, int? recipientId}) async {
+  await openPage<void>(
+      context,
+      state,
+      kind == 'agent_cashin'
+          ? state.tr('Member Cash-in', 'মেম্বার ক্যাশ ইন')
+          : state.tr('Agent Cash-out', 'এজেন্ট ক্যাশ আউট'),
+      (_) => SendMoneyPage(
+          state: state,
+          kind: kind,
+          initialRecipient: initialRecipient,
+          recipientId: recipientId));
+  await state.loadDashboardData();
+}
+
 class SendMoneyPage extends StatefulWidget {
   final ToriState state;
+  final String? kind;
   final SendMoneyService? service;
   final String? initialRecipient;
   final int? recipientId;
@@ -29,6 +52,7 @@ class SendMoneyPage extends StatefulWidget {
       {super.key,
       required this.state,
       this.service,
+      this.kind,
       this.initialRecipient,
       this.recipientId});
   @override
@@ -36,7 +60,10 @@ class SendMoneyPage extends StatefulWidget {
 }
 
 class _SendMoneyPageState extends State<SendMoneyPage> {
-  late final service = widget.service ?? SendMoneyService();
+  late final service = widget.service ??
+      (widget.kind == null
+          ? SendMoneyService()
+          : AgentMoneyService(widget.kind!));
   final recipient = TextEditingController(),
       amount = TextEditingController(),
       pin = TextEditingController();
@@ -140,8 +167,14 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
         context: context,
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
-              title: Text(s.tr(
-                  'Send money to this member?', 'এই মেম্বারকে টাকা পাঠাবেন?')),
+              title: Text(widget.kind == null
+                  ? s.tr('Send money to this member?',
+                      'এই মেম্বারকে টাকা পাঠাবেন?')
+                  : widget.kind == 'agent_cashin'
+                      ? s.tr('Confirm Member Cash-in?',
+                          'মেম্বার ক্যাশ ইন নিশ্চিত করবেন?')
+                      : s.tr('Confirm Agent Cash-out?',
+                          'এজেন্ট ক্যাশ আউট নিশ্চিত করবেন?')),
               content: SingleChildScrollView(
                   child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -150,11 +183,19 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
                     Text(
                         '${reviewed['recipient_name']} / ${reviewed['recipient_member_no'] ?? ''}'),
                     Text(
-                        '${s.tr('Recipient receives', 'প্রাপক পাবেন')}: ৳ ${reviewed['amount']}'),
+                        '${widget.kind == 'agent_cashout' ? s.tr('Cash you receive', 'আপনি নগদ পাবেন') : s.tr('Recipient receives', 'প্রাপক পাবেন')}: ৳ ${reviewed['amount']}'),
                     Text('${s.tr('Charge', 'চার্জ')}: ৳ ${reviewed['fee']}'),
                     Text(
                         '${s.tr('Total savings debit', 'সঞ্চয় থেকে মোট কাটবে')}: ৳ ${reviewed['total']}'),
                     const SizedBox(height: 12),
+                    if (widget.kind != null)
+                      Text(widget.kind == 'agent_cashin'
+                          ? s.tr(
+                              'Confirm only after receiving cash from the member.',
+                              'মেম্বারের নগদ টাকা পাওয়ার পর নিশ্চিত করুন।')
+                          : s.tr(
+                              'You will receive the principal amount in cash from the agent. Your PIN confirms immediate payment.',
+                              'এজেন্টের কাছ থেকে মূল টাকা নগদ পাবেন। আপনার পিনে সঙ্গে সঙ্গে পেমেন্ট হবে।')),
                     Text(s.tr(
                         'Check the recipient carefully. The transfer completes immediately.',
                         'প্রাপকের তথ্য ভালোভাবে দেখুন। ট্রান্সফার সঙ্গে সঙ্গে সম্পন্ন হবে।')),
@@ -166,7 +207,9 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
                 FilledButton(
                     key: const Key('send-money-final'),
                     onPressed: () => Navigator.pop(ctx, true),
-                    child: Text(s.tr('Send now', 'এখন পাঠান')))
+                    child: Text(widget.kind == null
+                        ? s.tr('Send now', 'এখন পাঠান')
+                        : s.tr('Confirm now', 'এখন নিশ্চিত করুন')))
               ],
             ));
     if (!mounted) return;
@@ -215,7 +258,7 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
             text(
                 '${s.tr('Transfer completed', 'ট্রান্সফার সম্পন্ন হয়েছে')}\n$receipt',
                 color: p.primary)),
-      if (receipt != null && completedRecipient != null)
+      if (widget.kind == null && receipt != null && completedRecipient != null)
         TextButton.icon(
             icon: const Icon(Icons.person_add_alt_1),
             label: Text(s.tr('Add to Quick Send', 'Quick Send-এ যোগ করুন')),
@@ -236,6 +279,11 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
                             : result['message'] ?? 'Unable to save')));
                   }),
       if (data != null) ...[
+        if (widget.kind == 'agent_cashin' && data!['agent'] != null)
+          SelectableText(
+              '${s.tr('Your Agent code', 'আপনার এজেন্ট কোড')}: ${data!['agent']['code']}'),
+        if (data!['transaction_window']?['blocked'] == true)
+          text(data!['transaction_window']['message'] ?? '', color: p.error),
         text(
             '${s.tr('Available savings', 'ব্যবহারযোগ্য সঞ্চয়')}: ৳ ${data!['available_balance']}',
             size: 18,
@@ -252,9 +300,32 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
                   'Per transaction: Tk ${data!['minimum_amount'] ?? '1.00'} – ${data!['maximum_amount'] ?? '10000000.00'}',
                   'প্রতি লেনদেনে: ৳ ${data!['minimum_amount'] ?? '1.00'} – ${data!['maximum_amount'] ?? '10000000.00'}'),
               color: p.muted),
+          if (widget.kind == 'agent_cashout')
+            TextButton.icon(
+                icon: const Icon(Icons.qr_code_scanner),
+                label: Text(s.tr('Scan Agent QR', 'এজেন্ট QR স্ক্যান করুন')),
+                onPressed: busy
+                    ? null
+                    : () async {
+                        final code = await Navigator.push<String>(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => CashoutScanner(
+                                    bengali: s.bengali,
+                                    title: s.tr('Scan Agent QR',
+                                        'এজেন্ট QR স্ক্যান করুন'))));
+                        if (!mounted || code == null) return;
+                        setState(() {
+                          recipient.text = code;
+                          selectedRecipient = null;
+                        });
+                      }),
           field(
-              s.tr('Recipient mobile number or Member ID',
-                  'প্রাপকের মোবাইল নম্বর অথবা মেম্বার আইডি'),
+              widget.kind == 'agent_cashout'
+                  ? s.tr('Agent code, mobile or Member ID',
+                      'এজেন্ট কোড, মোবাইল বা মেম্বার আইডি')
+                  : s.tr('Recipient mobile number or Member ID',
+                      'প্রাপকের মোবাইল নম্বর অথবা মেম্বার আইডি'),
               recipient,
               p,
               onChanged: (_) => selectedRecipient = null),
@@ -266,8 +337,8 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
         ],
         if (data!['enabled'] != true && reviewed == null)
           text(
-              s.tr('Send Money is currently unavailable.',
-                  'সেন্ড মানি বর্তমানে বন্ধ আছে।'),
+              s.tr('This service is currently unavailable.',
+                  'এই সেবাটি বর্তমানে বন্ধ আছে।'),
               color: p.muted),
         if (reviewed != null) ...[
           panel(
@@ -277,8 +348,12 @@ class _SendMoneyPageState extends State<SendMoneyPage> {
                     reviewed['recipient_name'] ?? '', p),
                 infoRow(s.tr('Member ID', 'মেম্বার আইডি'),
                     reviewed['recipient_member_no'] ?? '', p),
-                infoRow(s.tr('Recipient receives', 'প্রাপক পাবেন'),
-                    '৳ ${reviewed['amount']}', p),
+                infoRow(
+                    widget.kind == 'agent_cashout'
+                        ? s.tr('Cash you receive', 'আপনি নগদ পাবেন')
+                        : s.tr('Recipient receives', 'প্রাপক পাবেন'),
+                    '৳ ${reviewed['amount']}',
+                    p),
                 infoRow(s.tr('Charge', 'চার্জ'), '৳ ${reviewed['fee']}', p),
                 infoRow(s.tr('Total savings debit', 'সঞ্চয় থেকে মোট কাটবে'),
                     '৳ ${reviewed['total']}', p),

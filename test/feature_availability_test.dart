@@ -6,7 +6,23 @@ import 'package:tori_mfi_bank/profile.dart';
 import 'package:tori_mfi_bank/state.dart';
 
 void main() {
-  testWidgets('Home displays seven connected service cards including FDR', (tester) async {
+  testWidgets('Agents see Member Cash-in instead of Send Money',
+      (tester) async {
+    final state = ToriState()
+      ..agent = {'id': 1, 'code': 'AG-1', 'status': 'Active'};
+    await tester.pumpWidget(
+        MaterialApp(home: Scaffold(body: HomeScreen(state: state))));
+    final tiles =
+        tester.widgetList<ServiceTile>(find.byType(ServiceTile)).toList();
+    expect(tiles.first.label, 'Member Cash-in');
+    expect(tiles.map((t) => t.label), isNot(contains('Send Money')));
+    expect(tiles.map((t) => t.label), isNot(contains('Agent Cash-out')));
+    expect(tiles.length, 7);
+    state.logout();
+    expect(state.isAgent, false);
+  });
+  testWidgets('Home displays eight connected service cards including FDR',
+      (tester) async {
     await tester.pumpWidget(
         MaterialApp(home: Scaffold(body: HomeScreen(state: ToriState()))));
     final tiles =
@@ -15,9 +31,10 @@ void main() {
     expect(tiles[1].enabled, true);
     expect(tiles[1].label, 'Branch Cash-out');
     expect(tiles[2].enabled, true);
-    expect(tiles.length, 7);
+    expect(tiles.length, 8);
     expect(tiles.every((tile) => tile.enabled), true);
-    expect(tiles.map((tile) => tile.label), containsAll(['My Card', 'Referral Points', 'Statement']));
+    expect(tiles.map((tile) => tile.label),
+        containsAll(['My Card', 'Referral Points', 'Statement']));
   });
   testWidgets(
       'Profile keeps backend profile and card active, disables local-only options',
@@ -52,12 +69,14 @@ void main() {
     expect(
         find.ancestor(
             of: find.text('MFI Loan Pay'),
-            matching: find.byWidgetPredicate((widget) => widget is AbsorbPointer && widget.absorbing)),
+            matching: find.byWidgetPredicate(
+                (widget) => widget is AbsorbPointer && widget.absorbing)),
         findsOneWidget);
     expect(
         find.ancestor(
             of: find.text('Merchant Pay'),
-            matching: find.byWidgetPredicate((widget) => widget is AbsorbPointer && widget.absorbing)),
+            matching: find.byWidgetPredicate(
+                (widget) => widget is AbsorbPointer && widget.absorbing)),
         findsOneWidget);
   });
 }

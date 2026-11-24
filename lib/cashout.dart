@@ -367,7 +367,8 @@ class _CashoutPageState extends State<CashoutPage> {
 
 class CashoutScanner extends StatefulWidget {
   final bool bengali;
-  const CashoutScanner({super.key, required this.bengali});
+  final String? title;
+  const CashoutScanner({super.key, required this.bengali, this.title});
   @override
   State<CashoutScanner> createState() => _CashoutScannerState();
 }
@@ -384,9 +385,10 @@ class _CashoutScannerState extends State<CashoutScanner> {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
-            title: Text(widget.bengali
-                ? 'শাখার কিউআর স্ক্যান করুন'
-                : 'Scan branch QR')),
+            title: Text(widget.title ??
+                (widget.bengali
+                    ? 'শাখার কিউআর স্ক্যান করুন'
+                    : 'Scan branch QR'))),
         body: MobileScanner(
             controller: controller,
             onDetect: (capture) {
